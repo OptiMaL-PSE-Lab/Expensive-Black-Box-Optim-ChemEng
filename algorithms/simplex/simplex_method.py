@@ -15,13 +15,12 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
                 no stopping conditions
     
     constraints: constraint functions in form [g1,g2,...,gm]
-                for m constraint functions.
                 all have form g(x) <= 0 and return g(x)
                 
     OUTPUTS
     ------------------------------------
     output_dict: 
-        - 'x'           : final input variable in R^n
+        - 'x'           : final input variable
         
         - 'f'           : final function value
         
