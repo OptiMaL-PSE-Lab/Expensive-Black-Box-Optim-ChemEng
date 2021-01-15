@@ -22,12 +22,10 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/utilities/general_utility_functions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="234">
-              <caret line="18" lean-forward="true" selection-end-line="61" selection-end-column="22" />
+            <state relative-caret-position="1214">
+              <caret line="61" column="22" selection-start-line="61" selection-start-column="22" selection-end-line="61" selection-end-column="22" />
               <folding>
                 <element signature="e#183#199#0" expanded="true" />
-                <element signature="e#395#825#0" />
-                <element signature="e#820#1653#0" />
               </folding>
             </state>
           </provider>
@@ -178,12 +176,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/utilities/general_utility_functions.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="234">
-          <caret line="18" lean-forward="true" selection-end-line="61" selection-end-column="22" />
+        <state relative-caret-position="1214">
+          <caret line="61" column="22" selection-start-line="61" selection-start-column="22" selection-end-line="61" selection-end-column="22" />
           <folding>
             <element signature="e#183#199#0" expanded="true" />
-            <element signature="e#395#825#0" />
-            <element signature="e#820#1653#0" />
           </folding>
         </state>
       </provider>
