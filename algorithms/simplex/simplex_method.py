@@ -1,4 +1,7 @@
 import numpy as np 
+import sys
+sys.path.insert(1, 'utilities')
+from general_utility_functions import PenaltyFunctions
     
 def simplex_method(f,x0,bounds,max_iter,constraints):
     '''
@@ -42,6 +45,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
      - Stored function values at each iteration are not the penalised objective
         but the objective function itself.
     '''
+    f_aug = PenaltyFunctions(f,constraints,type_penalty='l2',mu=100)
+    
     bounds = np.array(bounds)   # converting to numpy if not 
     d = len(x0)                 # dimension 
     con_d = len(constraints)
@@ -55,10 +60,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
     x_store = np.zeros((max_iter,d)) # initialising x_store
     # evaluating function 
     for i in range(d+1):
-        f_nodes[i,:] = f(x_nodes[i,:]) 
-        # evaulating constraints as penalty
-        for ii in range(len(constraints)):
-            f_nodes[i,:] += con_weight * max(0,constraints[ii](x_nodes[i,:]))
+        f_nodes[i,:] = f_aug.aug_obj(x_nodes[i,:])  
         f_eval_count += 1 
     for its in range(max_iter):
         sorted_nodes = np.argsort(f_nodes[:,0])
@@ -67,20 +69,17 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
         # storing important quantities
         best_node = x_nodes[sorted_nodes[0]]
         x_store[its,:] = best_node
-        f_store[its] = f(best_node)
-        con_it = [0 for i in range(len(constraints))]
+        f_store[its] = f_aug.f(best_node)
+        con_it = [0 for i in range(con_d)]
         for i in range(len(con_it)):
-            con_it[i] = constraints[i](best_node)
+            con_it[i] = f_aug.g[i](best_node)
         g_store[its,:] = con_it 
 
         # centroid of all bar worst nodes
         centroid = np.mean(best_nodes,axis=0)
         # reflection of worst node
         x_reflected = centroid + (centroid - x_nodes[sorted_nodes[-1],:])
-        f_reflected =  f(x_reflected) 
-
-        for ii in range(len(constraints)):
-            f_reflected += con_weight * max(0,constraints[ii](x_reflected))
+        f_reflected =  f_aug.aug_obj(x_reflected) 
         f_eval_count += 1 
         # accept reflection? 
         if f_reflected < f_nodes[sorted_nodes[-2]] and \
@@ -90,9 +89,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
         # try expansion of reflected then accept? 
         elif f_reflected < f_nodes[sorted_nodes[0]]:
                 x_expanded = centroid + 2*(x_reflected-centroid)
-                f_expanded = f(x_expanded)
-                for ii in range(len(constraints)):
-                    f_expanded += con_weight * max(0,constraints[ii](x_expanded))
+                f_expanded = f_aug.aug_obj(x_expanded)
                 f_eval_count += 1 
                 if f_expanded < f_reflected:
                     x_nodes[sorted_nodes[-1],:] = x_expanded
@@ -102,30 +99,15 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
                     f_nodes[sorted_nodes[-1],:] = f_reflected
         else: # all else fails, contraction of worst internal of simplex
             x_contracted = centroid + 0.5*(x_nodes[sorted_nodes[-1],:]-centroid)
-            f_contracted = f(x_contracted)
-            for ii in range(len(constraints)):
-                f_contracted += con_weight * max(0,constraints[ii](x_contracted))
+            f_contracted = f_aug.aug_obj(x_contracted)
             f_eval_count += 1
             if f_contracted < f_nodes[sorted_nodes[-1]]:
                 x_nodes[sorted_nodes[-1],:] = x_contracted
                 f_nodes[sorted_nodes[-1],:] = f_contracted
    # computing final constraint violation 
-    con_viol = [0 for i in range(len(constraints))]
-    act_cons = [0 for i in range(len(constraints))]
-    for i in range(len(constraints)):
-        con_val = constraints[i](x_nodes[sorted_nodes[0]])
-        con_viol[i] = con_val 
-    con_viol_total = sum(max(0,con_viol[i]) for i in range(len(con_viol)))         
     output_dict = {}
-    output_dict['x'] = x_nodes[sorted_nodes[0]]
-    output_dict['f'] = f(x_nodes[sorted_nodes[0]])
-    output_dict['g'] = con_viol 
-    output_dict['g_viol'] =  con_viol_total
     output_dict['g_store'] = g_store
     output_dict['x_store'] = x_store
     output_dict['f_store'] = f_store 
-    output_dict['f_evals'] = f_eval_count
-    
-    
+    output_dict['N_evals'] = f_eval_count
     return output_dict
-
