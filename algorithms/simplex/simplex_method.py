@@ -23,13 +23,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
     OUTPUTS
     ------------------------------------
     output_dict: 
-        - 'x'           : final input variable
-        
-        - 'f'           : final function value
-        
-        - 'g'           : value of each constraint function at optimal solution
-        
-        - 'f_evals'     : total number of function evaluations
+        - 'N_evals'     : total number of function evaluations
         
         - 'f_store'     : best function value at each iteration
                             
@@ -37,8 +31,12 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
                             
         - 'g_store'     : list of all previous constraint values (per iteration)
         
-        - 'g_viol'      : total constraint violation (sum over constraints)
-    
+        - 'f_best_so_far'     : best function value of all previous iterations
+                            
+        - 'g_best_so_far'     : constraint violation of previous best f 
+                            
+        - 'x_best_so_far'     : variables of best function value across previous its
+        
     NOTES
     --------------------------------------
      - Only function values that contribute towards the optimisation are counted.
@@ -54,15 +52,22 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
     x_nodes = np.random.normal(x0,f_range,(d+1,d))  # creating nodes
     f_nodes = np.zeros((len(x_nodes[:,0]),1))       # function value at each node
     f_eval_count = 0            # initialising total function evaluation counter
-    con_weight = 10000           # setting constraint penalty
-    f_store = np.zeros(max_iter)      # initialising function store
+    f_store = np.zeros(max_iter)            # initialising function store
     g_store = np.zeros((max_iter,con_d))
-    x_store = np.zeros((max_iter,d)) # initialising x_store
+    x_store = np.zeros((max_iter,d))        # initialising x_store
+    f_best_so_far = np.zeros(max_iter)      # initialising function store
+    x_best_so_far = np.zeros((max_iter,d))
+    g_best_so_far = np.zeros((max_iter,con_d))
+
+
     # evaluating function 
     for i in range(d+1):
         f_nodes[i,:] = f_aug.aug_obj(x_nodes[i,:])  
         f_eval_count += 1 
+        
+    
     for its in range(max_iter):
+        
         sorted_nodes = np.argsort(f_nodes[:,0])
         best_nodes = x_nodes[sorted_nodes[:-1]]
         
@@ -74,6 +79,19 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
         for i in range(len(con_it)):
             con_it[i] = f_aug.g[i](best_node)
         g_store[its,:] = con_it 
+        
+        if its == 0:
+            f_best_so_far[its] = f_store[its] 
+            x_best_so_far[its] = x_store[its]
+            g_best_so_far[its] = g_store[its]
+        else:
+            f_best_so_far[its] = f_store[its] 
+            x_best_so_far[its] = best_node
+            g_best_so_far[its] = g_store[its]
+            if f_best_so_far[its] > f_best_so_far[its-1]:
+                f_best_so_far[its] = f_best_so_far[its-1]
+                x_best_so_far[its] = x_best_so_far[its-1]
+                g_best_so_far[its] = g_best_so_far[its-1]
 
         # centroid of all bar worst nodes
         centroid = np.mean(best_nodes,axis=0)
@@ -104,10 +122,14 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
             if f_contracted < f_nodes[sorted_nodes[-1]]:
                 x_nodes[sorted_nodes[-1],:] = x_contracted
                 f_nodes[sorted_nodes[-1],:] = f_contracted
+                
    # computing final constraint violation 
     output_dict = {}
     output_dict['g_store'] = g_store
     output_dict['x_store'] = x_store
     output_dict['f_store'] = f_store 
+    output_dict['g_best_so_far'] = g_best_so_far
+    output_dict['x_best_so_far'] = x_best_so_far
+    output_dict['f_best_so_far'] = f_best_so_far
     output_dict['N_evals'] = f_eval_count
     return output_dict
