@@ -18,7 +18,6 @@ class PyBobyqaWrapper:
     def __init__(self, solver=pybobyqa.solve):
         self.solve_naked = pybobyqa.solve
 
-    @pybobyqa.solve
     def solve(self, objfun, x0, args=(), bounds=None, npt=None,
               rhobeg=None, rhoend=1e-8, maxfun=None, nsamples=None,
               user_params=None, objfun_has_noise=False, seek_global_minimum=False,
@@ -32,9 +31,39 @@ class PyBobyqaWrapper:
               seek_global_minimum=seek_global_minimum, scaling_within_bounds=scaling_within_bounds,
               do_logging=do_logging, print_progress=print_progress)
 
+        self.create_dictionary_for_solution(sol1)
+
 
     def create_dictionary_for_solution(self, sol):
-        
+
 
 
         self.output_dict = {}
+
+
+
+    def find_min_so_far(self, argmin=False):
+        """
+        This function find the best solution so far, mainly used for EI
+        :param argmin: Boolean that if it is True the func returns which point is the best
+        :type argmin:  Boolean
+        """
+        min = np.inf
+        index = np.inf
+        if self.card_of_funcs==1:
+
+            for i in range(len(self.X)):
+                    y = self.Y[i,0]
+                    if y< min:
+                        min   = y
+                        index = i
+        else:
+            for i in range(len(self.X)):
+                y = self.Y[i, 0]
+                if y < min and all(self.Y[i,1:].data.numpy()<=0):
+                    min   = y
+                    index = i
+        if argmin:
+            return min, index
+        else:
+            return min
