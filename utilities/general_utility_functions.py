@@ -6,24 +6,32 @@
 
 import functools
 import warnings
+import numpy as np
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
 
 class PenaltyFunctions:
     def __init__(self, f, g, type_penalty='l2', mu=100):
-        self.f = f
-        self.g = g
+        self.f     = f
+        self.g     = g
+
+        self.f_his = []
+        self.g_his = []
+
         self.type_p = type_penalty
         self.aug_obj = self.augmented_objective(mu)
 
     def create_quadratic_penalized_objective(self, mu, order, x):
 
         obj = self.f(x)
+        self.f_his += [obj.copy()]
         n_con = len(self.g)
+        g_tot = np.zeros(n_con)
         for i in range(n_con):
-            obj += mu * max(self.g[i](x), 0) ** order
-
+            g_tot[i] = self.g[i](x)
+            obj += mu * max(g_tot[i], 0) ** order
+        self.g_his += [g_tot]
         return obj
 
     def augmented_objective(self, mu):

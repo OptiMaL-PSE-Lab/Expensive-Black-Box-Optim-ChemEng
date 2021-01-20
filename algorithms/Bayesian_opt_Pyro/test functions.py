@@ -7,10 +7,12 @@ from torch.distributions import constraints, transform_to
 import numpy as np
 import pyro
 import pyro.contrib.gp as gp
-from utilities_full import BayesOpt, PenaltyFunctions
+from algorithms.Bayesian_opt_Pyro.utilities_full import BayesOpt
+from utilities.general_utility_functions import PenaltyFunctions
 assert pyro.__version__.startswith('1.5.1')
 pyro.enable_validation(True)  # can help with debugging
 pyro.set_rng_seed(1)
+
 import pybobyqa
 import functools
 
@@ -64,8 +66,8 @@ f1 = rosenbrock_f
 g1 = rosenbrock_g1
 g2 = rosenbrock_g2
 
-
-f_pen = PenaltyFunctions(f1,[g1,g2],type_penalty='l2', mu=100)#functools.partial(penalized_objective,f1,[g1,g2], 100)
+Penaly_fun = PenaltyFunctions(f1,[g1,g2],type_penalty='l2', mu=1e3)
+f_pen = Penaly_fun.aug_obj#functools.partial(penalized_objective,f1,[g1,g2], 100)
 
 
 
