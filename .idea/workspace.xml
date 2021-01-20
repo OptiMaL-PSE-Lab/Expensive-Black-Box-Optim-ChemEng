@@ -9,41 +9,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/algorithms/simplex/simplex_test.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="99">
-              <caret line="18" selection-start-line="18" selection-end-line="18" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/algorithms/simplex/simplex_method.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="94">
-              <caret line="118" selection-start-line="118" selection-end-line="127" selection-end-column="4" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/algorithms/Bayesian_opt_Pyro/utilities_full.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="200">
-              <caret line="815" column="14" selection-start-line="815" selection-start-column="14" selection-end-line="815" selection-end-column="14" />
-              <folding>
-                <element signature="e#0#38#0" expanded="true" />
-                <element signature="e#21854#22319#0" />
-                <element signature="e#22363#22749#0" />
-                <element signature="e#22783#24822#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -54,14 +20,6 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-  <component name="IdeDocumentHistory">
-    <option name="CHANGED_PATHS">
-      <list>
-        <option value="$PROJECT_DIR$/algorithms/simplex/simplex_test.py" />
-        <option value="$PROJECT_DIR$/utilities/general_utility_functions.py" />
-      </list>
-    </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="-12" />
@@ -74,38 +32,11 @@
     </navigator>
     <panes>
       <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="462c0819:PsiDirectoryNode" />
-              <item name="algorithms" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="462c0819:PsiDirectoryNode" />
-              <item name="algorithms" type="462c0819:PsiDirectoryNode" />
-              <item name="Bayesian_opt_Pyro" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Expensive-Black-Box-Optim-ChemEng" type="462c0819:PsiDirectoryNode" />
-              <item name="algorithms" type="462c0819:PsiDirectoryNode" />
-              <item name="simplex" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
+      <pane id="ProjectPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/algorithms/simplex/simplex_test.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -164,13 +95,13 @@
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1295" height="775" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2494043" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2494043" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
       <window_info anchor="bottom" id="Run" order="2" />
-      <window_info active="true" anchor="bottom" id="Debug" order="3" visible="true" weight="0.38975155" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.38975155" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -184,34 +115,17 @@
     </layout>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/utilities/general_utility_functions.py" />
-    <entry file="file://$PROJECT_DIR$/algorithms/Bayesian_opt_Pyro/.idea/vcs.xml">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/algorithms/simplex/simplex_test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="99">
-          <caret line="18" selection-start-line="18" selection-end-line="18" />
+        <state relative-caret-position="59">
+          <caret line="16" selection-start-line="16" selection-end-line="16" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/algorithms/simplex/simplex_method.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="94">
-          <caret line="118" selection-start-line="118" selection-end-line="127" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/algorithms/Bayesian_opt_Pyro/utilities_full.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="200">
-          <caret line="815" column="14" selection-start-line="815" selection-start-column="14" selection-end-line="815" selection-end-column="14" />
-          <folding>
-            <element signature="e#0#38#0" expanded="true" />
-            <element signature="e#21854#22319#0" />
-            <element signature="e#22363#22749#0" />
-            <element signature="e#22783#24822#0" />
-          </folding>
+        <state relative-caret-position="194">
+          <caret line="27" column="8" lean-forward="true" selection-start-line="27" selection-start-column="8" selection-end-line="27" selection-end-column="8" />
         </state>
       </provider>
     </entry>
