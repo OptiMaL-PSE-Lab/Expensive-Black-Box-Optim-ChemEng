@@ -12,6 +12,10 @@ def custom_formatwarning(msg, *args, **kwargs):
     return str(msg) + '\n'
 
 class PenaltyFunctions:
+    """
+    BE CAREFULL TO INITIALIZE THIS FUNCTION BEFORE USE!!
+    IT TAKES HISTORICAL DATA WITH IT
+    """
     def __init__(self, f, g, type_penalty='l2', mu=100):
         self.f     = f
         self.g     = g
