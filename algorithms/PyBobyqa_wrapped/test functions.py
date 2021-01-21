@@ -34,7 +34,7 @@ f_pen = Penaly_fun.aug_obj#functools.partial(penalized_objective,f1,[g1,g2], 100
 
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([0.5,0.5])
-soln = PyBobyqaWrapper().solve(f_pen, x0, bounds=bounds.T)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
+soln = PyBobyqaWrapper().solve(f1, x0, bounds=bounds.T, constraints=[g1,g2])#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
 soln = pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
