@@ -605,20 +605,30 @@ class BayesOpt(object):
         print('Optimum Objective Found: ', y_opt.numpy())
         print('Optimum point Found: ', x_opt.numpy())
         output_dict = {}
-        output_dict['x_all'] = self.X
-        output_dict['x']     = x_opt#
-        output_dict['f']     = y_opt#
-        if self.card_of_funcs>0:
-            output_dict['g'] = self.Y[optim,1:]
-        else:
-            output_dict['g'] = 'No constraints'
-        output_dict['g_store'] = self.Y[self.N_initial:,1:]
-        output_dict['x_store'] = self.X[self.N_initial:]
-        output_dict['f_store'] = self.Y[self.N_initial:,0]
-        output_dict['f_all']   = self.Y
-        output_dict['f_best_so_far'] = x_his_optimal
-        output_dict['x_best_so_far'] = y_his_optimal
+        # output_dict['x_all'] = self.X
+        # output_dict['x']     = x_opt#
+        # output_dict['f']     = y_opt#
+        # if self.card_of_funcs>0:
+        #     output_dict['g'] = self.Y[optim,1:]
+        # else:
+        #     output_dict['g'] = 'No constraints'
+        # output_dict['g_store'] = self.Y[self.N_initial:,1:]
+        # output_dict['x_store'] = self.X[self.N_initial:]
+        # output_dict['f_store'] = self.Y[self.N_initial:,0]
+        # output_dict['f_all']   = self.Y
+        # output_dict['f_best_so_far'] = x_his_optimal
+        # output_dict['x_best_so_far'] = y_his_optimal
 
+        #f_so_far, g_so_far = self.find_min_so_far()
+        output_dict = {}
+        output_dict['g_store']       = self.Y[self.N_initial:,1:]
+        output_dict['x_store']       = self.X[self.N_initial:]
+        output_dict['f_store']       = self.Y[self.N_initial:,0]
+        output_dict['N_evals']       = self.maxfun
+        output_dict['g_best_so_far'] = y_his_optimal[:,1:]
+        output_dict['f_best_so_far'] = y_his_optimal[:,0]
+        output_dict['x_best_so_far'] = x_his_optimal
+        output_dict['TR']            = [None]*self.maxfun
 
 
 
