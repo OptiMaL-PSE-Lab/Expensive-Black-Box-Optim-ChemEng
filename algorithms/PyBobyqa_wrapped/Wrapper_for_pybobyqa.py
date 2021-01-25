@@ -52,7 +52,7 @@ class PyBobyqaWrapper:
                   seek_global_minimum=seek_global_minimum, scaling_within_bounds=scaling_within_bounds,
                   do_logging=do_logging, print_progress=print_progress)
 
-        self.create_dictionary_for_solution(sol1)
+        return self.create_dictionary_for_solution(sol1)
 
 
     def create_dictionary_for_solution(self, sol):
@@ -61,13 +61,13 @@ class PyBobyqaWrapper:
         f_so_far, g_so_far = self.find_min_so_far()
         output_dict = {}
         output_dict['g_store']       = self.Penaly_fun.g_his
-        output_dict['x_store']       = sol.diagnostic_info['xk']
+        output_dict['x_store']       = np.array([sol.diagnostic_info['xk']])[0].astype('d')
         output_dict['f_store']       = self.Penaly_fun.f_his
         output_dict['N_evals']       = self.maxfun
         output_dict['g_best_so_far'] = g_so_far
         output_dict['f_best_so_far'] = f_so_far
-        output_dict['x_best_so_far'] = sol.diagnostic_info['xk']
-        output_dict['TR']            = sol.diagnostic_info['delta'].to_numpy()
+        output_dict['x_best_so_far'] = np.array([sol.diagnostic_info['xk']])[0].astype('d')
+        output_dict['TR']            = np.array([sol.diagnostic_info['delta']])[0].astype('d')
         return output_dict
 
 
