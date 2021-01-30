@@ -3,4 +3,8 @@ test_functions/__pycache__/rosenbrock_constrained.cpython-38.pyc
 algorithms/simplex/__pycache__/simplex_method.cpython-38.pyc
 /algorithms/simplex/__pycache__
 /test_functions/__pycache__
+<<<<<<< HEAD
 /algorithms/nesterov_random/__pycache__
+=======
+.idea/workspace.xml
+>>>>>>> remotes/origin/PyBobyqa-wrapper

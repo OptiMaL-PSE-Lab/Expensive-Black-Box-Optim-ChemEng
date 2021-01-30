@@ -1,41 +1,25 @@
-#------------------------------------------------
-#  This file contains extra functions to perform
-#  additional operations needed everywhere
-#  e.g. Create objective with penalties.
-#  Generate initial points for the model-based methods
-
 import functools
 import warnings
-import numpy as np
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
 
+
+
 class PenaltyFunctions:
-    """
-    BE CAREFULL TO INITIALIZE THIS FUNCTION BEFORE USE!!
-    IT TAKES HISTORICAL DATA WITH IT
-    """
     def __init__(self, f, g, type_penalty='l2', mu=100):
-        self.f     = f
-        self.g     = g
-
-        self.f_his = []
-        self.g_his = []
-
+        self.f = f
+        self.g = g
         self.type_p = type_penalty
         self.aug_obj = self.augmented_objective(mu)
 
     def create_quadratic_penalized_objective(self, mu, order, x):
 
         obj = self.f(x)
-        self.f_his += [obj.copy()]
         n_con = len(self.g)
-        g_tot = np.zeros(n_con)
         for i in range(n_con):
-            g_tot[i] = self.g[i](x)
-            obj += mu * max(g_tot[i], 0) ** order
-        self.g_his += [g_tot]
+            obj += mu * max(self.g[i](x), 0) ** order
+
         return obj
 
     def augmented_objective(self, mu):
