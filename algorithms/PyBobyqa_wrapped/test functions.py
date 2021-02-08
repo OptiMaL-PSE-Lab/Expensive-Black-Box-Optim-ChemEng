@@ -10,7 +10,7 @@ import pyro.contrib.gp as gp
 from algorithms.Bayesian_opt_Pyro.utilities_full import BayesOpt
 from test_functions import rosenbrock_constrained, quadratic_constrained
 
-from utilities.general_utility_functions import PenaltyFunctions
+from utilities.general_utility_functions import PenaltyFunctions, plot_generic
 assert pyro.__version__.startswith('1.5.1')
 pyro.enable_validation(True)  # can help with debugging
 pyro.set_rng_seed(1)
@@ -34,14 +34,22 @@ f_pen = Penaly_fun.aug_obj#functools.partial(penalized_objective,f1,[g1,g2], 100
 
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([0.5,0.5])
-soln = PyBobyqaWrapper().solve(f1, x0, bounds=bounds.T, constraints=[g1,g2])#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
-soln = pybobyqa.solve(f_pen, x0, bounds=bounds.T)
+
+
+soln = PyBobyqaWrapper().solve(f1, x0, bounds=bounds.T, constraints=[g1,g2], maxfun=20)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
 
 #solution1 = BayesOpt().solve(f1, x0, bounds=bounds.T, print_iteration=True, constraints=[g1,g2])
-solution = BayesOpt().solve(f1, x0, acquisition='EIC',bounds=bounds.T, print_iteration=True, constraints=[g1, g2], casadi=True)
 
+Bayes = BayesOpt()
+
+solution2 = Bayes.solve(f1, x0, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=[g1, g2], casadi=True)
+
+
+soln = PyBobyqaWrapper().solve(f1, x0, bounds=bounds.T, constraints=[g1,g2], maxfun=20)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
+
+plot_generic([soln, solution2.output_dict])
 
 f1 = quadratic_constrained.quadratic_f
 g1 = quadratic_constrained.quadratic_g

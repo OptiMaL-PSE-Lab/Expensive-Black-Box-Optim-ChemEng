@@ -23,9 +23,10 @@ def custom_formatwarning(msg, *args, **kwargs):
 
 class BayesOpt(object):
     def __init__(self):
+        pyro.get_param_store().clear()
         print('Start Bayesian Optimization using Torch')
 
-    def solve(self, objective, xo=None, bounds=(0,1), maxfun=20, N_initial=4,
+    def solve(self, objective, xo=None, bounds=(0,1), maxfun=20, N_initial=5,
               select_kernel='Matern32', acquisition='LCB', casadi=False, constraints = None,
               probabilistic=False, print_iteration=False):
         """
@@ -125,6 +126,7 @@ class BayesOpt(object):
         :return:   Defined GP
         :rtype:    pyro object
         """
+        pyro.get_param_store().clear()
         Y_unscaled  = self.Y
         X_unscaled   = self.X
         nx = self.nx
@@ -139,7 +141,8 @@ class BayesOpt(object):
         X, Y = self.X_norm, self.Y_norm
 
         if self.kernel == 'Matern52':
-            gpmodel = gp.models.GPRegression(X, Y[:, i], gp.kernels.Matern52(input_dim=nx,                                                                                         lengthscale=torch.ones(nx)),
+            gpmodel = gp.models.GPRegression(X, Y[:, i], gp.kernels.Matern52(input_dim=nx,
+                                                                             lengthscale=torch.ones(nx)),
                                                          noise=torch.tensor(0.1), jitter=1.0e-4, )
         elif self.kernel == 'Matern32':
             gpmodel = gp.models.GPRegression(X, Y[:, i], gp.kernels.Matern32(input_dim=nx,
@@ -210,7 +213,7 @@ class BayesOpt(object):
 
         gp_m.set_data(X, y)
         # optimize the GP hyperparameters using Adam with lr=0.001
-        pyro.clear_param_store()
+        pyro.get_param_store().clear()
         optimizers = torch.optim.Adam(gp_m.parameters(), lr=0.001)
         s = gp.util.train(gp_m, optimizers)
 
