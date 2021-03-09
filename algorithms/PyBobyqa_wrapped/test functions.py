@@ -24,7 +24,7 @@ from algorithms.PyBobyqa_wrapped.Wrapper_for_pybobyqa import PyBobyqaWrapper
 def Problem_rosenbrock(x):
     f1 = rosenbrock_constrained.rosenbrock_f
     g1 = rosenbrock_constrained.rosenbrock_g1
-    g2 = rosenbrock_constrained.rosenbrock_g1
+    g2 = rosenbrock_constrained.rosenbrock_g2
     f_total = [f1(x), g1(x), g2(x)]
     return f_total
 
@@ -34,10 +34,8 @@ f_pen = Penaly_fun.aug_obj#functools.partial(penalized_objective,f1,[g1,g2], 100
 
 
 
-
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([0.5,0.5])
-
 
 
 soln = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, maxfun=20,constraints=2)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
