@@ -5,3 +5,5 @@ algorithms/simplex/__pycache__/simplex_method.cpython-38.pyc
 /test_functions/__pycache__
 .idea/workspace.xml
 .idea/workspace.xml
+algorithms/Bayesian_opt_Pyro/.idea/workspace.xml
+*.xml
