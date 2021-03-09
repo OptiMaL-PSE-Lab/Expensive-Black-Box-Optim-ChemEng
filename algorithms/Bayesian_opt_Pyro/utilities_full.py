@@ -71,16 +71,16 @@ class BayesOpt(object):
         if constraints is None:
             self.constraints = []
         else:
-            self.constraints = constraints
+            #self.constraints = constraints
             if not(casadi) and acquisition != 'EIC':
                 casadi = True
                 warnings.formatwarning = custom_formatwarning
 
                 warnings.warn('WARNING: Pytorch optimization cannot handle constraints without EIC. Casadi and ipopt are used instead')
         # Append all the functions
-        self.set_functions  = [self.objective]
-        self.set_functions += [*self.constraints]
-        self.card_of_funcs  = len(self.set_functions)
+        self.set_functions  = self.objective#[self.objective]
+        #self.set_functions += [*self.constraints]
+        self.card_of_funcs  = 1+constraints #len(self.set_functions)
 
 
         self.kernel        = select_kernel
@@ -113,8 +113,8 @@ class BayesOpt(object):
         """
         Y = torch.zeros([self.N_initial, self.card_of_funcs])
         for i in range(self.N_initial):
-            for j in range(self.card_of_funcs):
-                Y[i, j] = self.compute_function(self.X[i,:], self.set_functions[j]).reshape(-1,)
+            #for j in range(self.card_of_funcs):
+            Y[i, :] = self.compute_function(self.X[i,:], self.set_functions).reshape(-1,)
         return Y
 
 
@@ -566,8 +566,8 @@ class BayesOpt(object):
         """
         xmin = xmin.reshape(-1,)
         y = torch.zeros([1, self.card_of_funcs])
-        for i in range(self.card_of_funcs):
-            y[0,i] = self.compute_function(xmin, self.set_functions[i]).reshape(-1,)
+        #for i in range(self.card_of_funcs):
+        y[0,:] = self.compute_function(xmin, self.set_functions).reshape(-1,)
         self.X = torch.cat([self.X, xmin.reshape(1,self.nx)])
         self.Y = torch.cat([self.Y, y])
 
@@ -678,7 +678,7 @@ class BayesOpt(object):
         :rtype:          tensor
         """
         x = x_torch.detach().numpy().reshape(-1,)
-        y = f(x).reshape(-1,)
+        y = np.array(f(x)).reshape(-1,)
 
         return torch.from_numpy(y).type(torch.FloatTensor)
 
