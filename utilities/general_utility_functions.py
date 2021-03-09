@@ -18,7 +18,7 @@ class PenaltyFunctions:
     IT TAKES HISTORICAL DATA WITH IT
     """
     def __init__(self, f_total, type_penalty='l2', mu=100):
-        self.f     = f_total
+        self.f = f_total
         #self.g     = g
 
         self.f_his = []
@@ -31,13 +31,13 @@ class PenaltyFunctions:
 
         funcs = self.f(x)
         obj   = funcs[0]
-        card_of_funcs = len(funcs)
+        card_of_funcs = len(funcs[1])+1
 
         self.f_his += [obj.copy()]
         n_con = card_of_funcs-1
         g_tot = np.zeros(n_con)
         for i in range(n_con):
-            g_tot[i] = funcs[i+1]
+            g_tot[i] = funcs[1][i]
             obj += mu * max(g_tot[i], 0) ** order
         self.g_his += [g_tot]
         return obj

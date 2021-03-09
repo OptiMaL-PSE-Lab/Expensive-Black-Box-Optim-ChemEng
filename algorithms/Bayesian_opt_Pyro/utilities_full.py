@@ -678,7 +678,9 @@ class BayesOpt(object):
         :rtype:          tensor
         """
         x = x_torch.detach().numpy().reshape(-1,)
-        y = np.array(f(x)).reshape(-1,)
+        obj_temp, con_temp = f(x)
+
+        y = np.array([obj_temp, *con_temp]).reshape(-1,)
 
         return torch.from_numpy(y).type(torch.FloatTensor)
 

@@ -25,8 +25,8 @@ def Problem_rosenbrock(x):
     f1 = rosenbrock_constrained.rosenbrock_f
     g1 = rosenbrock_constrained.rosenbrock_g1
     g2 = rosenbrock_constrained.rosenbrock_g2
-    f_total = [f1(x), g1(x), g2(x)]
-    return f_total
+
+    return f1(x), [g1(x), g2(x)]
 
 
 Penaly_fun = PenaltyFunctions(Problem_rosenbrock,type_penalty='l2', mu=1e3)
