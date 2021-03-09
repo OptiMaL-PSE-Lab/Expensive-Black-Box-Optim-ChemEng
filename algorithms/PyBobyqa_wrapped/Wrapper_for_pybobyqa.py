@@ -22,12 +22,12 @@ class PyBobyqaWrapper:
               rhobeg=None, rhoend=1e-8, maxfun=100, nsamples=None,
               user_params=None, objfun_has_noise=False, seek_global_minimum=False,
               scaling_within_bounds=False, do_logging=True, print_progress=False,
-              constraints=None, penalty_con='l2', mu_con=1e3):
+              constraints =0, penalty_con='l2', mu_con=1e3):
         user_params1 = {'logging.save_diagnostic_info': True}
         user_params1['logging.save_xk'] = True
         user_params1['logging.save_xk'] = True
         self.maxfun = maxfun
-        if constraints==None:
+        if (constraints)==0:#constraints==None:
 
             self.card_of_funcs = 1
 
@@ -37,9 +37,9 @@ class PyBobyqaWrapper:
                   seek_global_minimum=seek_global_minimum, scaling_within_bounds=scaling_within_bounds,
                   do_logging=do_logging, print_progress=print_progress)
         else:
-            self.constraints = constraints
-            self.card_of_funcs = 1 + len(constraints)
-            self.Penaly_fun = PenaltyFunctions(objfun, constraints, type_penalty='l2', mu=1e3)
+            #self.constraints = constraints
+            self.card_of_funcs = 1 +constraints
+            self.Penaly_fun = PenaltyFunctions(objfun, type_penalty=penalty_con, mu=1e3)
             f_pen = self.Penaly_fun.aug_obj  # functools.partial(penalized_objective,f1,[g1,g2], 100)
 
             # self.set_functions = [self.objective]
