@@ -17,9 +17,9 @@ class PenaltyFunctions:
     BE CAREFULL TO INITIALIZE THIS FUNCTION BEFORE USE!!
     IT TAKES HISTORICAL DATA WITH IT
     """
-    def __init__(self, f, g, type_penalty='l2', mu=100):
-        self.f     = f
-        self.g     = g
+    def __init__(self, f_total, type_penalty='l2', mu=100):
+        self.f = f_total
+        #self.g     = g
 
         self.f_his = []
         self.g_his = []
@@ -29,12 +29,15 @@ class PenaltyFunctions:
 
     def create_quadratic_penalized_objective(self, mu, order, x):
 
-        obj = self.f(x)
+        funcs = self.f(x)
+        obj   = funcs[0]
+        card_of_funcs = len(funcs[1])+1
+
         self.f_his += [obj.copy()]
-        n_con = len(self.g)
+        n_con = card_of_funcs-1
         g_tot = np.zeros(n_con)
         for i in range(n_con):
-            g_tot[i] = self.g[i](x)
+            g_tot[i] = funcs[1][i]
             obj += mu * max(g_tot[i], 0) ** order
         self.g_his += [g_tot]
         return obj
