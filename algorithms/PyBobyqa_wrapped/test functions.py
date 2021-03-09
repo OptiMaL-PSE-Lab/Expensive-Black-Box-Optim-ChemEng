@@ -40,12 +40,15 @@ x0 = np.array([0.5,0.5])
 
 soln = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, maxfun=20,constraints=2)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
-print("2")
 #solution1 = BayesOpt().solve(f1, x0, bounds=bounds.T, print_iteration=True, constraints=[g1,g2])
 #
-# Bayes = BayesOpt()
+Bayes = BayesOpt()
 #
-# solution2 = Bayes.solve(f1, x0, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=[g1, g2], casadi=True)
+solution2 = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=2, casadi=True)
+
+print("2")
+
+
 #
 #
 # soln = PyBobyqaWrapper().solve(f1, x0, bounds=bounds.T, constraints=[g1,g2], maxfun=20)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
