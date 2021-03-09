@@ -1,6 +1,7 @@
 from casadi import *
 from scipy import stats
 import pandas as pd
+import pyDOE as pyDoE
 
 def plant_model_real(sens):
     """
@@ -100,6 +101,104 @@ def plant_model(sens):
     ntheta = theta.shape
 
     return f, nu, nx, ntheta
+
+
+def plant_model_simple(sens):
+    """
+    Define the model that is meant to describe the physical system
+    :return: model f
+    """
+    nx = 3
+    ntheta = 4
+    nu = 2
+    x = MX.sym('x', nx)
+    u = MX.sym('u', nu)
+    theta = MX.sym('theta', ntheta)
+
+    x_p = MX.sym('xp', np.shape(x)[0] * np.shape(theta)[0])
+
+    k1 = exp(theta[0] - theta[1] * 1e4 / 8.314 * (1 / (u[0] + 273.15)))# - 1 / (90 + 273.15)))
+    k2 = exp(theta[2] - theta[3] * 1e4 / 8.314 * (1 / (u[0] + 273.15)))# - 1 / (90 + 273.15)))
+
+
+    r1 = k1 * x[0]
+    r2 = k2 * x[1]
+
+    xdot = vertcat(- r1, - r2+r1, r2) #+\
+           #vertcat(u[1]*0.6, 0, 0, 0, u[2]*2.4)/2 - \
+           #(u[1]+u[2]+u[3]) * x/2
+    # Quadrature
+    L = []  # x1 ** 2 + x2 ** 2 + 1*u1 ** 2 + 1*u2**2
+    # Algebraic
+    alg = []
+
+    # Calculate on the fly dynamic sensitivities without the need of perturbations
+    if sens == 'sensitivity':
+        xpdot = []
+        for i in range(np.shape(theta)[0]):
+            xpdot = vertcat(xpdot, jacobian(xdot, x) @ (x_p[nx * i: nx * i + nx])
+                            + jacobian(xdot, theta)[nx * i: nx * i + nx])
+            f = Function('f', [x, u, theta, x_p], [xdot, L, xpdot],
+                         ['x', 'u', 'theta', 'xp'], ['xdot', 'L', 'xpdot'])
+    else:
+        f = Function('f', [x, u, theta], [xdot, L], ['x', 'u', 'theta'], ['xdot', 'L'])
+
+    nu = u.shape
+    nx = x.shape
+    ntheta = theta.shape
+
+    return f, nu, nx, ntheta
+
+
+
+def plant_model_real_simple(sens):
+    """
+    Define the model that is meant to describe the physical system
+    :return: model f
+    """
+    nx = 3
+    ntheta = 4
+    nu = 2
+    x = MX.sym('x', nx)
+    u = MX.sym('u', nu)
+    theta = MX.sym('theta', ntheta)
+
+    x_p = MX.sym('xp', np.shape(x)[0] * np.shape(theta)[0])
+
+    k1 = exp(theta[0] - theta[1] * 1e4 / 8.314 * (1 / (u[0] + 273.15)))# - 1 / (90 + 273.15)))
+    k2 = exp(theta[2] - theta[3] * 1e4 / 8.314 * (1 / (u[0] + 273.15)))# - 1 / (90 + 273.15)))
+
+
+    r1 = k1 * x[0]
+    r2 = k2 * x[1]
+
+    xdot = vertcat(- r1, - r2+r1, r2) #+\
+           #vertcat(u[1]*0.6, 0, 0, 0, u[2]*2.4)/2 - \
+           #(u[1]+u[2]+u[3]) * x/2
+    # Quadrature
+    L = []  # x1 ** 2 + x2 ** 2 + 1*u1 ** 2 + 1*u2**2
+    # Algebraic
+    alg = []
+
+    # Calculate on the fly dynamic sensitivities without the need of perturbations
+    if sens == 'sensitivity':
+        xpdot = []
+        for i in range(np.shape(theta)[0]):
+            xpdot = vertcat(xpdot, jacobian(xdot, x) @ (x_p[nx * i: nx * i + nx])
+                            + jacobian(xdot, theta)[nx * i: nx * i + nx])
+            f = Function('f', [x, u, theta, x_p], [xdot, L, xpdot],
+                         ['x', 'u', 'theta', 'xp'], ['xdot', 'L', 'xpdot'])
+    else:
+        f = Function('f', [x, u, theta], [xdot, L], ['x', 'u', 'theta'], ['xdot', 'L'])
+
+    nu = u.shape
+    nx = x.shape
+    ntheta = theta.shape
+
+    return f, nu, nx, ntheta
+
+
+
 
 def plant_model_GP(GP, GP1, sens):
     """
@@ -387,9 +486,9 @@ def chisquare_test(chisquare_value, conf_level, dof):
     return ref_chisquare, chisquare_value
 
 
-def objective_moo(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, select_design, param,u):
+def objective(f, u, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o):
 
-    ntheta = len(theta)
+    ntheta = np.shape(theta)[1]
     x_meas1 = np.zeros([N_exp + 10, nx[0], n_points + 1])
 
     xp_meas = np.zeros((ntheta * nx[0], N_exp * n_points))
@@ -408,7 +507,7 @@ def objective_moo(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, 
         dt[k0, :] = V / np.sum(u[k0, 1:])/n_points
         for i in range(n_points):
             F = integrator_model(f, nu, nx, ntheta, 'embedded', 'sensitivity', dt[k0, i])
-            Fk = F(x0=vertcat(x11, xp1), p=vertcat(u[k0, :], theta[:8]))
+            Fk = F(x0=vertcat(x11, xp1), p=vertcat(u[k0, :], theta[:8].reshape((-1,))))
 
             x11 = Fk['xf'][0:nx[0]]
             xp1 = Fk['xf'][nx[0]:]
@@ -427,71 +526,9 @@ def objective_moo(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, 
        #        xp_r[:, i] = w_opt[i] * xp_r[:, i]
         vv1 += (xp_r[:-1, :].T @ np.linalg.inv(np.diag(np.square(sigma[:]))) @ xp_r[:-1, :])
         vv = np.linalg.inv(vv1)
-    obj =-designs(vv1, select_design, param)#np.min(np.linalg.eig(vv1)[0])#np.log(np.linalg.det(vv1)+0.0001)#-## np.linalg.eig(vv)[0][0]#
+    obj = -np.log(np.linalg.det(vv1)+0.0001)#-np.linalg.eig(vv)[0].max()##-np.linalg.eig(vv)[0].max()#
 
     return obj
-
-def objective(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, select_design,u):
-
-    ntheta = len(theta)
-    x_meas1 = np.zeros([N_exp + 10, nx[0], n_points + 1])
-
-    xp_meas = np.zeros((ntheta * nx[0], N_exp * n_points))
-    dt      = np.zeros([N_exp,n_points])
-    pp = 0
-    s = 0
-    x_init = np.zeros([N_exp,nx[0]])
-    for i in range(nx[0] - 1):
-        x_init[:N_exp, 0] = c1o * u[:N_exp, 1] / sum(u[:N_exp, i] for i in range(1, nu[0]))
-    x_init[:N_exp, -1] = c2o * u[:N_exp, 2] / sum(u[:N_exp, i] for i in range(1, nu[0]))
-
-    for k0 in range(N_exp):
-        x11 = x_init[k0, :]  # change it
-        x_meas1[s, :, 0] = np.array(x11.T[:nx[0]])
-        xp1 = np.zeros([nx[0] * ntheta, 1])
-        dt[k0, :] = V / np.sum(u[k0, 1:])/n_points
-        for i in range(n_points):
-            F = integrator_model(f, nu, nx, ntheta, 'embedded', 'sensitivity', dt[k0, i])
-            Fk = F(x0=vertcat(x11, xp1), p=vertcat(u[k0, :], theta[:8]))
-
-            x11 = Fk['xf'][0:nx[0]]
-            xp1 = Fk['xf'][nx[0]:]
-            # + np.random.multivariate_normal([0.] * nx[0], np.diag(np. square(sigma))).T
-            x_meas1[s, :, i + 1] = np.array(x11.T)
-            xp_meas[:, pp] = np.array(xp1.T)
-            pp += 1
-        s += 1
-
-    vv1 = V_old
-    for k in range(N_exp * (n_points)):
-        xp_r = reshape(xp_meas[:, k], (nx[0], ntheta))
-       #    vv = np.zeros([ntheta[0], ntheta[0], N])
-       #    for i in range(0, N):
-       #    for i in range(ntheta[0]):
-       #        xp_r[:, i] = w_opt[i] * xp_r[:, i]
-        vv1 += (xp_r[:-1, :].T @ np.linalg.inv(np.diag(np.square(sigma[:]))) @ xp_r[:-1, :])
-        vv = np.linalg.inv(vv1)
-    obj =-designs(vv1, select_design)#np.min(np.linalg.eig(vv1)[0])#np.log(np.linalg.det(vv1)+0.0001)#-## np.linalg.eig(vv)[0][0]#
-
-    return obj
-
-def designs(x, select_design='A', param=0.1):
-    if select_design=='A':
-        return np.trace(x)
-    elif select_design=='D':
-        return np.log(np.linalg.det(x)+0.0001)
-    elif select_design=='E':
-        return np.min(np.linalg.eig(x)[0])
-    elif select_design=='E1':
-        return np.sort(np.linalg.eig(x)[0])[1]
-    elif select_design=='MOO':
-        return (1-param)*np.min(np.linalg.eig(x)[0])+ param*np.trace(x)/10000
-    elif select_design=='MOO1':
-        return (1-param)*np.log(np.linalg.det(x)+0.0001)+ param*np.trace(x)/10000
-    elif select_design=='MOO2':
-        return (1-param)*np.min(np.linalg.eig(x)[0])+ param*np.log(np.linalg.det(x)+0.0001)
-    elif select_design=='MOO3':
-        return (1-param)*np.min(np.linalg.eig(x)[0])+ param*np.sort(np.linalg.eig(x)[0])[1]
 
 
 def objective_pe_mcmc(theta, kwargs):#, ):
@@ -592,17 +629,16 @@ def objective_pe(f, u, x_meas, N_exp, nx, n_points, nu, theta, V, c1o, c2o):
 
 
 
-def give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file, info,lab):
+def give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file):
     for i in range(1, N_exp + 1):
-        file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations epoch_' + str(
-        i) + '_Leeds_' + lab + '_nLabBots_2.csv' # '/output_concentrations_'+str(i)+'.csv'
-
+        file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations_' + str(
+            i) + '.csv'  # '/output_concentrations_'+str(i)+'.csv'
 
     size = np.shape(np.array(pd.read_csv(file[0])))
     xl = np.zeros([N_exp, size[0] - 1, 1])  # size[1]])
 
     for i in range(N_exp):
-        xl[i, :, :] = np.array(pd.read_csv(file[i])['Concentration (mole/L)'])[1:].reshape(4, 1)
+        xl[i, :, :] = np.array(pd.read_csv(file[i])['Concentration (mol/L)'])[1:].reshape(4, 1)
         for j in range(size[0] - 1):
             for k in range(1):
                 if xl[i, j, k] < 0:
@@ -631,7 +667,7 @@ def give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file, info,lab):
     # u[0] -----> T
     #
     """
-    u[0] ---> T   #REVISIT
+    u[0] ---> T
     u[1] ---> F1
     u[2] ---> F2
     u[3] ---> F3
@@ -653,13 +689,12 @@ def give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file, info,lab):
         #x_meas[i, -1, :] = xl[i, 0:n*n_points + 1:n, 2].T
     """""
 
-    setup = '/Users/' + PC + '/Dropbox/UCL/' + date + info#'/Exp_Setup_Info_06-September-2019_11_34_19.csv'
-    setup1 = np.array(pd.read_csv(setup)['C(mole/L)'])
+    setup = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Exp_Setup_Info_06-September-2019_11_34_19.csv'
+    setup1 = np.array(pd.read_csv(setup))[0]
 
-    c1o = setup1[1]  # 2.03
-    c2o = setup1[0]  # 4.17
-    volume_file = '/Users/' + PC + '/Dropbox/UCL/' + date +'/Reactor Volume, (mL) Leeds_'+lab+'.txt'
-    V = np.array(pd.read_csv(volume_file, header = None))[0,0]  # 2.7
+    c1o = setup1[2]  # 2.03
+    c2o = setup1[1]  # 4.17
+    V = setup1[0]  # 2.7
 
     for i in range(N_exp):
         x_meas[i, 0, n_points] = xl[i, 0]
@@ -680,7 +715,7 @@ def give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file, info,lab):
     return x_meas, u_meas, V, c1o, c2o, dt
 
 
-def give_data_from_exp_recal(nu, nx, ntheta, N_exp, PC, date, file, labot, info):
+def give_data_from_exp_recal(nu, nx, ntheta, N_exp, PC, date, file, labot):
     for i in range(1, N_exp + 1):
         file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations_' + str(
             i) + '.csv'  # '/output_concentrations_'+str(i)+'.csv'
@@ -756,7 +791,7 @@ def give_data_from_exp_recal(nu, nx, ntheta, N_exp, PC, date, file, labot, info)
         #x_meas[i, -1, :] = xl[i, 0:n*n_points + 1:n, 2].T
     """""
 
-    setup = '/Users/' + PC + '/Dropbox/UCL/' + date + info#'/Exp_Setup_Info_06-September-2019_11_34_19.csv'
+    setup = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Exp_Setup_Info_06-September-2019_11_34_19.csv'
     setup1 = np.array(pd.read_csv(setup))[0]
 
     c1o = setup1[2]  # 2.03
@@ -787,10 +822,147 @@ def give_data_from_exp_recal(nu, nx, ntheta, N_exp, PC, date, file, labot, info)
     return x_meas, u_meas, V, c1o, c2o, dt
 
 
-def give_data_from_sim(N_exp, PC, date, file, true_theta, info):
+def give_data_from_sim_simple(N_exp, true_theta):
+
+
+    n_points = 1
+    n = 1
+
+    f, nu, nx, ntheta = plant_model_real_simple([])
+    """
+    change it 
+    """
+    Tmax = 373-273.15
+    Tmin = 333-273.15
+    Fmax = 0.008
+    Fmin = 0.004
+    u_norm = pyDoE.lhs(nu[0], N_exp)
+    u_meas = [Tmax-Tmin, Fmax-Fmin] *  pyDoE.lhs(nu[0], N_exp) + [Tmin, Fmin]
+
+    x_meas = np.zeros((N_exp + 30, nx[0], n_points + 1))
+    #u_meas = np.zeros((N_exp + 30, nu[0]))
+
+
+
+
+    # -------------- Change the concentrations --------------#
+    # u[0] -----> T
+    #
+    """
+    u[0] ---> T
+    u[1] ---> F1
+    u[2] ---> F2
+    u[3] ---> F3
+
+    x[0] ---> c1
+    x[1] ---> c3
+    x[2] ---> c4
+    x[3] ---> c5
+    x[4] ---> c2 --- NOT
+    """
+
+    # ------------------------------------------------------- #
+    dt = np.zeros([N_exp + 32, n_points])
+
+    """""
+    for i in range(N_exp):
+        x_meas[i, 0, :] = xl[i, 0:n * n_points + 1:n, 1].T
+        x_meas[i, 1:nx[0]-1, :] = xl[i, 0:n*n_points + 1:n, 3:(nx[0]-1)+2].T
+        #x_meas[i, -1, :] = xl[i, 0:n*n_points + 1:n, 2].T
+    """""
+
+    #setup = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Exp_Setup_Info_06-September-2019_11_34_19.csv'
+    #setup1 = np.array(pd.read_csv(setup))[0]
+
+    #c1o = setup1[2]  # 2.03
+    #c2o = setup1[1]  # 4.17
+    #V = setup1[0]  # 2.7
+
+    for i in range(N_exp):
+
+        #u_meas[i, 1] = ul[i][0][1]
+        #u_meas[i, 2] = ul[i][0][0]
+        #u_meas[i, 3] = ul[i][0][2]
+
+        #u_meas[i, 0] = ul[i][0][-1]
+        x_meas[i, 0, 0] = 2. #* u_meas[i, 1] / sum(u_meas[i, j] for j in range(1, nu[0]))
+        x_meas[i, 1, 0] = 0.
+        x_meas[i, 2, 0] = 0.
+        bed_length = 1.2#200  # channel length in cm
+        Ac = 25#4.91 * (10 ** -4)
+        V = Ac * bed_length# * 1e-3
+        dt[i, :] = V / sum(u_meas[i, 1:])  # xl[i, n:n*n_points + 1:n, 0].T - xl[i, 0:(n)*n_points :n, 0].T
+
+    x_init = np.zeros([N_exp, nx[0]])
+    for i in range(nx[0] - 1):
+        x_init[:N_exp, i] = x_meas[:N_exp, i, 0]
+
+    pp = 0
+    s = 0
+    for k0 in range(N_exp):
+        x11 = x_init[k0, :]  # change it
+        for i in range(n_points):
+            F = integrator_model(f, nu, nx, ntheta, 'embedded', 'nope', dt[k0, i])
+            Fk = F(x0=vertcat(x11), p=vertcat(u_meas[k0, :],true_theta))
+
+            x11 = Fk['xf'][0:nx[0]]
+
+            # + np.random.multivariate_normal([0.] * nx[0], np.diag(np. square(sigma))).T
+            x_meas[s, :, i + 1] = np.array(x11[0:nx[0]].T)
+
+        s += 1
+    return x_meas, u_meas, V, dt
+
+
+def give_data_from_sim_update_simple(k_exp, x_meas, u_opt, dt, true_theta, c1o, c2o, V):
+    f, nu, nx, ntheta = plant_model_real([])
+    x_meas[k_exp, 0, 0] = c1o * u_opt[1] / sum(u_opt[ 1:])  # u_opt[1]/sum(u_opt[1:])
+    x_meas[k_exp, 1, 0] = 0.
+    x_meas[k_exp, 2, 0] = 0.
+
+    x_init = np.zeros([1, x_meas.shape[1]+1])
+    for i in range(nx[0]):
+        x_init[0, i] = x_meas[k_exp, i, 0]
+    x11 = x_init[0, :]
+    dt[k_exp, :] = V / sum(u_opt[1:])  # sum(u_opt[1:])#xl[0, n:n * n_points + 1:n, 0].T - xl[0, 0: n * n_points :n, 0].T
+    for i in range(1):
+        F = integrator_model(f, nu, nx, ntheta, 'embedded', 'no', dt[k_exp, i])
+        Fk = F(x0=vertcat(x11), p=vertcat(u_opt, true_theta))
+
+        x11 = Fk['xf'][0:nx[0]]
+    # + np.random.multivariate_normal([0.] * nx[0], np.diag(np. square(sigma))).T
+        x_meas[k_exp,:, i+1] = np.array(x11.T)
+    return x_meas, dt
+
+
+def give_data_from_sim_update_simple1(k_exp, u_opt, dt, true_theta, c1o, c2o, V):
+    f, nu, nx, ntheta = plant_model_real([])
+    x_meas = np.zeros([5,2])
+    x_meas[0, 0] = c1o * u_opt[1] / sum(u_opt[ 1:])  # u_opt[1]/sum(u_opt[1:])
+    x_meas[1, 0] = 0.
+    x_meas[2, 0] = 0.
+
+    x_init = np.zeros([1, nx[0]])
+    for i in range(nx[0]):
+        x_init[0, i] = x_meas[i, 0]
+    x11 = x_init[0, :]
+    dt[k_exp, :] = V / sum(u_opt[1:])  # sum(u_opt[1:])#xl[0, n:n * n_points + 1:n, 0].T - xl[0, 0: n * n_points :n, 0].T
+    for i in range(1):
+        F = integrator_model(f, nu, nx, ntheta, 'embedded', 'no', dt[k_exp, i])
+        Fk = F(x0=vertcat(x11), p=vertcat(u_opt, true_theta))
+
+        x11 = Fk['xf'][0:nx[0]]
+    # + np.random.multivariate_normal([0.] * nx[0], np.diag(np. square(sigma))).T
+        x_meas[:, i+1] = np.array(x11.T)
+    return x_meas, dt
+
+
+
+
+def give_data_from_sim(N_exp, PC, date, file, true_theta):
 
     for i in range(1, N_exp + 1):
-        file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations_' + str(
+        file[i - 1] = '/Users/' + PC + '/OneDrive - University College London/Leeds_working_space - ss - Exp - BO - TR/zippedRuns/' + date + '/Peaks and Concentrations_' + str(
             i) + '.csv'  # '/output_concentrations_'+str(i)+'.csv'
 
     size = np.shape(np.array(pd.read_csv(file[0])))
@@ -805,9 +977,9 @@ def give_data_from_sim(N_exp, PC, date, file, true_theta, info):
 
     for i in range(1, N_exp + 1):
         if i >= 10:
-            file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Requests_' + str(i) + '.csv'
+            file[i - 1] = '/Users/' + PC + '/OneDrive - University College London/Leeds_working_space - ss - Exp - BO - TR/zippedRuns/' + date + '/Requests_' + str(i) + '.csv'
         else:
-            file[i - 1] = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Requests_0' + str(i) + '.csv'
+            file[i - 1] = '/Users/' + PC + '/OneDrive - University College London/Leeds_working_space - ss - Exp - BO - TR/zippedRuns/' + date + '/Requests_0' + str(i) + '.csv'
 
     size = np.shape(np.array(pd.read_csv(file[0])))
     ul = np.zeros([N_exp, size[0], size[1]])
@@ -850,7 +1022,7 @@ def give_data_from_sim(N_exp, PC, date, file, true_theta, info):
         #x_meas[i, -1, :] = xl[i, 0:n*n_points + 1:n, 2].T
     """""
 
-    setup = '/Users/' + PC + '/Dropbox/UCL/' + date + info#'/Exp_Setup_Info_06-September-2019_11_34_19.csv'
+    setup = '/Users/' + PC + '/OneDrive - University College London/Leeds_working_space - ss - Exp - BO - TR/zippedRuns/' + date + '/Exp_Setup_Info_06-September-2019_11_34_19.csv'
     setup1 = np.array(pd.read_csv(setup))[0]
 
     c1o = setup1[2]  # 2.03
@@ -862,7 +1034,7 @@ def give_data_from_sim(N_exp, PC, date, file, true_theta, info):
         u_meas[i, 1] = ul[i][0][1]
         u_meas[i, 2] = ul[i][0][0]
         u_meas[i, 3] = ul[i][0][2]
-
+##
         u_meas[i, 0] = ul[i][0][-1]
         x_meas[i, 0, 0] = c1o * u_meas[i, 1] / sum(u_meas[i, j] for j in range(1, nu[0]))
         x_meas[i, 1, 0] = 0.
@@ -890,6 +1062,10 @@ def give_data_from_sim(N_exp, PC, date, file, true_theta, info):
 
         s += 1
     return x_meas, u_meas, V, c1o, c2o, dt
+
+
+
+
 
 def give_data_from_sim_update(k_exp, x_meas, u_opt, dt, true_theta, c1o, c2o, V):
     f, nu, nx, ntheta = plant_model_real([])
@@ -992,48 +1168,3 @@ def compute_rf(nu, nx, ntheta, N_exp, PC, date, file):
         df = pd.DataFrame(df0)
         df.to_excel(file1, index=False)
     return rf, rf_1
-
-
-def objective_cov(f, u, x_meas, N_exp, nx, n_points, nu, V, c1o, c2o,theta):
-
-    ntheta = len(theta)
-    x_meas1 = np.zeros([N_exp, nx[0], n_points + 1])
-    xmin = np.zeros(nx[0]-1)
-    xmax = np.zeros(nx[0]-1)#-1)
-    x_meas_norm = x_meas.copy()
-    for i in range(nx[0]-1):
-        xmax[i] = np.max(x_meas[:, i, :])
-        if xmax[i] > 1e-9:
-            x_meas_norm[:, i, :] = x_meas[:, i, :]/xmax[i]
-        else:
-            x_meas_norm[:, i, :] = x_meas[:, i, :]
-            xmax[i] = 1.
-
-    dt      = np.zeros([N_exp, n_points])
-    pp = 0
-    s = 0
-    x_init = np.zeros([N_exp,nx[0]])
-    for i in range(nx[0] - 1):
-        x_init[:N_exp, 0] = c1o * u[:N_exp, 1] / sum(u[:N_exp, i] for i in range(1, nu[0]))
-    x_init[:N_exp, -1] = c2o * u[:N_exp, 2] / sum(u[:N_exp, i] for i in range(1, nu[0]))
-    mle = 0
-    for k0 in range(N_exp):
-        x11 = x_init[k0, :]  # change it
-        x_meas1[s, :, 0] = np.array(x11.T[:nx[0]])
-        dt[k0, :] = V / np.sum(u[k0, 1:])/n_points
-        for i in range(n_points):
-            F = integrator_model(f, nu, nx, ntheta, 'embedded', 'mope', dt[k0, i])
-            Fk = F(x0=vertcat(x11), p=vertcat(u[k0, :], theta[:8]))
-
-            x11 = Fk['xf'][0:nx[0]]
-            # + np.random.multivariate_normal([0.] * nx[0], np.diag(np. square(sigma))).T
-            x_meas1[s, :, i + 1] = np.array(x11.T)
-            pp += 1
-            mle += maximum_likelihood_est(s, x_meas1[s,:-1,i+1] , x_meas_norm, [1, 1, 1, 1], i, xmax)
-
-        s += 1
-
-
-    obj = mle#np.linalg.eig(vv1)[0][0]#
-
-    return obj

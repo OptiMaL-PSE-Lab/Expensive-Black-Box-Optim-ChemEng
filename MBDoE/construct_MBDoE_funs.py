@@ -1,4 +1,6 @@
-import MBDoE.utilities_leeds as utilities
+import MBDoE.utilities_leeds_pre as utilities
+import MBDoE.utilities_leeds as utilities1
+
 import MBDoE.ut as ut
 import numpy as np
 import casadi as ca
@@ -33,15 +35,13 @@ u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
 # T = 200.
 #
 #
-# N_exp    = 3#5
+# N_exp    = 8#5
 # PC       = 'Panos'
+# #PC       =  'ppets' #For laptop
 # #PC       =  'ppets' #For laptop
 # labbot   = True
 # file     = ['NaN']*N_exp
-# date     = '2020/1. Oct_temp/3. 13-Oct-2020/LabBot1/20201013_test01'#'28-Jan-2020/20200128-Panos'#'16-Jan-2020/20200116-Panos-2/20200116-Panos-2'#'trial/20190906_UCL_Panos_3'##'03-Sep-2019/20190903_UCL_Panos'#'07-Oct-2019/Run3/20191007_UCL_SS3'##
-# lab      = 'LabBot_1'
-# info     = '/Exp_Setup_Info_Leeds_'+lab+'.csv'#'/Exp_Setup_Info_16-January-2020_14_29_54.csv'#
-# condition= '/Process_Conditions_Bounds_13-October-2020_11_23_49_Leeds_LabBot_1.csv'#'/Process_Conditions_Bounds_16-January-2020_14_29_54.csv'#
+# date     = 'zippedRuns/06-Sep-2019/20190906_UCL_Panos_3'#'03-Sep-2019/20190903_UCL_Panos'#'07-Oct-2019/Run3/20191007_UCL_SS3'##
 #
 # #date1      = '06-Sep-2019/20190906_UCL_Panos_3'#'trial/20190906_UCL_Panos_3'##'03-Sep-2019/20190903_UCL_Panos'#'07-Oct-2019/Run3/20191007_UCL_SS3'##
 # ##info1      = '/Exp_Setup_Info_06-September-2019_11_34_19.csv'#
@@ -51,14 +51,14 @@ u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
 #
 # time_to_wait = 60 * 3000
 # time_counter = 0
-# file0 = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations epoch_' + str(N_exp) + '_Leeds_'+lab+'_nLabBots_2.csv'
+# #file0 = '/Users/' + PC + '/Dropbox/UCL/' + date + '/Peaks and Concentrations epoch_' + str(N_exp) + '_Leeds_'+lab+'_nLabBots_2.csv'
 #
 #
 #
 # if labbot==True:
 #     f, nu, nx, ntheta = utilities.plant_model([])
 #     #x_meas0, u_meas0, V0, c1o0, c2o0, dt0 = give_data_from_exp_recal(nu, nx, ntheta, N_exp, PC, date1, file, 1, info1)#Need to change dates
-#     x_meas, u_meas, V, c1o, c2o, dt = utilities.give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file, info, lab)
+#     x_meas, u_meas, V, c1o, c2o, dt = utilities.give_data_from_exp(nu, nx, ntheta, N_exp, PC, date, file)
 # #    compute_rf(nu, nx, ntheta, N_exp, PC, date, file)
 #
 #
@@ -191,24 +191,36 @@ u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
 #
 # k_exp = N_exp+1
 #
-
-
-thetas = np.array([-1.99016019e+00,  4.02029750e-07,  1.13025371e+00,  1.95547106e+01,
-       -9.07495402e+00,  3.34202879e-02, -7.39214576e+00,  3.99978552e+01])
+#
+# thetas = w_opt
+# # thetas = np.array([-1.99016019e+00,  4.02029750e-07,  1.13025371e+00,  1.95547106e+01,
+# #        -9.07495402e+00,  3.34202879e-02, -7.39214576e+00,  3.99978552e+01])
 import pickle
-vv1, _, nx, _, nu, true_theta, sigma,V, c1o, c2o = pickle.load( open('FIM.p', 'rb'))
+vv1, _, nx, _, nu, thetas, sigma,V, c1o, c2o = pickle.load( open('FIM.p', 'rb'))
 
-s = utilities.objective( f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o, u_t.reshape(1, nu[0]),)
+s = utilities1.objective( f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o,'A', u_t.reshape(1, nu[0]))
 
 import functools
 funs = functools.partial(utilities.objective, f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o)
-def construct_obj_MBDoE():
-    vv1, _, nx, _, nu, true_theta, sigma, V, c1o, c2o = pickle.load(open('FIM.p', 'rb'))
-    thetas = np.array([-1.99016019e+00, 4.02029750e-07, 1.13025371e+00, 1.95547106e+01,
-                       -9.07495402e+00, 3.34202879e-02, -7.39214576e+00, 3.99978552e+01])
 
-    funs = functools.partial(utilities.objective, f, vv1, 1, nx, 1, nu, true_theta, sigma,V, c1o, c2o)
+def construct_obj_MBDoE(select_design):
+    vv1, _, nx, _, nu, thetas, sigma, V, c1o, c2o = pickle.load(open('FIM2.p', 'rb'))
+    # thetas = np.array([-1.99016019e+00, 4.02029750e-07, 1.13025371e+00, 1.95547106e+01,
+    #                    -9.07495402e+00, 3.34202879e-02, -7.39214576e+00, 3.99978552e+01])
+    #
+    funs = functools.partial(utilities1.objective, f, vv1, 1, nx, 1, nu,
+                             true_theta, sigma,V, c1o, c2o, select_design)
     return funs
+
+def construct_obj_MBDoE_moo(select_design, param):
+    vv1, _, nx, _, nu, thetas, sigma, V, c1o, c2o = pickle.load(open('FIM2.p', 'rb'))
+    # thetas = np.array([-1.99016019e+00, 4.02029750e-07, 1.13025371e+00, 1.95547106e+01,
+    #                    -9.07495402e+00, 3.34202879e-02, -7.39214576e+00, 3.99978552e+01])
+    #
+    funs = functools.partial(utilities1.objective_moo, f, vv1, 1, nx, 1, nu,
+                             true_theta, sigma,V, c1o, c2o, select_design, param)
+    return funs
+
 def obj_norm(funs, u):
     lbu = [60, 0.3, 0.3, 0.3]  # [60, 0.3, 0.3, 0.3]#, 0.1]
     ubu = [130, 3, 3, 3]  # [130, 3, 3, 3]#, 2.0]
@@ -219,10 +231,13 @@ def obj_norm(funs, u):
     u_apply = u_t.reshape(1, nu[0])
     return funs(u_apply)
 
-def obj_MBDoE():
+def obj_MBDoE(select_design='A'):
+    funs = construct_obj_MBDoE(select_design)
     return functools.partial(obj_norm, funs)
 
-obj = obj_MBDoE()
+def obj_MBDoE_moo(select_design='A', param=0.1):
+    funs = construct_obj_MBDoE_moo(select_design, param)
+    return functools.partial(obj_norm, funs)
 
 def con_MBDoE(u):
     return 0.
