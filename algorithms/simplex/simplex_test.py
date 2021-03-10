@@ -32,4 +32,4 @@ x0 = [0.5,0.5]
 sol = simplex_method(f,x0,bounds,max_iter=its,constraints=[g1])
 
 print(sol)
->>>>>>> 5ce6d474ae824b61185bbdf70b85f0edbfda9bca
+>>>>>>> remotes/origin/PyBobyqa-wrapper
