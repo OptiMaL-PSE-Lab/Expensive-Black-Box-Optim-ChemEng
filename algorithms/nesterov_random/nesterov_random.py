@@ -14,7 +14,7 @@ def nesterov_random(f,x0,bounds,max_iter,constraints):
     x = x0
     f_eval_count = 0 
     alpha = 0.001
-    mu = 0.01
+    mu = 0.001
     for i in range(max_iter):
 
         x_store[i,:] = x
