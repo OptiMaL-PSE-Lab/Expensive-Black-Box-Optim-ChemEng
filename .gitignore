@@ -3,4 +3,11 @@ test_functions/__pycache__/rosenbrock_constrained.cpython-38.pyc
 algorithms/simplex/__pycache__/simplex_method.cpython-38.pyc
 /algorithms/simplex/__pycache__
 /test_functions/__pycache__
+<<<<<<< HEAD
 /algorithms/nesterov_random/__pycache__
+=======
+.idea/workspace.xml
+.idea/workspace.xml
+algorithms/Bayesian_opt_Pyro/.idea/workspace.xml
+*.xml
+>>>>>>> 5ce6d474ae824b61185bbdf70b85f0edbfda9bca
