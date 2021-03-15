@@ -5,9 +5,11 @@ from general_utility_functions import PenaltyFunctions
 
 
 def nesterov_random(f,x0,bounds,max_iter,constraints):
-    f_aug = PenaltyFunctions(f,constraints,type_penalty='l2',mu=100)
+
+    f_aug = PenaltyFunctions(f,type_penalty='l2',mu=1e3)
+    
     d = len(x0)
-    con_d = len(constraints)
+    con_d = constraints
     x_store = np.zeros((max_iter,d))
     g_store = np.zeros((max_iter,con_d))
     f_store = np.zeros(max_iter)
@@ -18,7 +20,10 @@ def nesterov_random(f,x0,bounds,max_iter,constraints):
     for i in range(max_iter):
 
         x_store[i,:] = x
-        f_store[i] = f_aug.f(x)
+        f = f_aug.f(x)
+        f_store[i] = f[0]
+        g_store[i] = f[1]
+        
         
         u = np.random.normal(0,1,(1,d))
         B = np.array([[1,0],[0,1]])

@@ -17,8 +17,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
     max_iter:   total optimisation iterations due to 
                 no stopping conditions
     
-    constraints: constraint functions in form [g1,g2,...,gm]
-                all have form g(x) <= 0 and return g(x)
+    constraints: the number of constraints
                 
     OUTPUTS
     ------------------------------------
@@ -43,11 +42,11 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
      - Stored function values at each iteration are not the penalised objective
         but the objective function itself.
     '''
-    f_aug = PenaltyFunctions(f,constraints,type_penalty='l2',mu=100)
+    f_aug = PenaltyFunctions(f,type_penalty='l2',mu=1e3)
     
     bounds = np.array(bounds)   # converting to numpy if not 
     d = len(x0)                 # dimension 
-    con_d = len(constraints)
+    con_d = constraints
     f_range = (bounds[:,1] - bounds[:,0])*0.1       # range of initial simplex
     x_nodes = np.random.normal(x0,f_range,(d+1,d))  # creating nodes
     f_nodes = np.zeros((len(x_nodes[:,0]),1))       # function value at each node
@@ -74,11 +73,9 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
         # storing important quantities
         best_node = x_nodes[sorted_nodes[0]]
         x_store[its,:] = best_node
-        f_store[its] = f_aug.f(best_node)
-        con_it = [0 for i in range(con_d)]
-        for i in range(len(con_it)):
-            con_it[i] = f_aug.g[i](best_node)
-        g_store[its,:] = con_it 
+        f_evalled = f_aug.f(best_node)
+        f_store[its] = f_evalled[0]
+        g_store[its,:] = f_evalled[1]
         
         if its == 0:
             f_best_so_far[its] = f_store[its] 
