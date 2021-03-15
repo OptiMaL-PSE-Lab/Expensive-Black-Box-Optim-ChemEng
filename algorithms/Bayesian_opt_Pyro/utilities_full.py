@@ -187,7 +187,7 @@ class BayesOpt(object):
             # gp.util.train(self.gpmodel[i], optimizers)
             # self.gpmodel[i].requires_grad_(True)
 
-            g.append(copy.deepcopy(self.step_train(self.gpmodel[i], X, Y[:,i])))
+            g.append((self.step_train(self.gpmodel[i], X, Y[:,i])) )
             # self.gpmodel[i].requires_grad_(False)
         #     if i ==0:
         #         for j in (g[0].parameters()):
@@ -231,7 +231,7 @@ class BayesOpt(object):
         acquisition = self.acquisition
         X_unscaled  = X_unscaled.reshape((1,-1))
         x           = (X_unscaled - self.X_mean) / self.X_std
-        gp = copy.deepcopy(self.gpmodel[0])
+        gp = (self.gpmodel[0]) 
         if acquisition=='Mean':
             mu, _ = gp(x, full_cov=False, noiseless=False)
             ac = mu
@@ -281,7 +281,7 @@ class BayesOpt(object):
 
                 Y_unscaled = self.Y[:, i]
                 Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
 
                 mean_norm, var_norm = gp_c(x, full_cov=False, noiseless=False)
 
@@ -306,7 +306,7 @@ class BayesOpt(object):
         acquisition = self.acquisition
         #X_unscaled  = X_unscaled.reshape((1,-1))
         x           = X_unscaled#(X_unscaled - self.X_mean) / self.X_std
-        gp = copy.deepcopy(self.gpmodel[0])
+        gp = (self.gpmodel[0]) 
         if acquisition=='Mean':
             mu, _ = self.GP_predict_ca(x, gp)
             ac = mu
@@ -355,7 +355,7 @@ class BayesOpt(object):
                 Y_unscaled = self.Y[:, i]
                 Y_mean, Y_std = SX(Y_unscaled.detach().numpy().mean()),\
                                 SX(Y_unscaled.detach().numpy().std())
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
                 mean_norm, var_norm = self.GP_predict_ca(x, gp_c)
 
                 mean, var = mean_norm * Y_std + Y_mean, var_norm * Y_std ** 2
@@ -437,7 +437,7 @@ class BayesOpt(object):
 
         if self.card_of_funcs>0 and self.acquisition != 'EIC':
             for i in range(1,self.card_of_funcs):#self.model.nk*self.model.nu):
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
 
                 mean_norm, var_norm = self.GP_predict_ca(U, gp_c)
 
@@ -517,7 +517,7 @@ class BayesOpt(object):
             #Find the minimum
             self.f_min = self.find_min_so_far()
             if self.casadi:
-                # self.GP_predict_ca((x_init[0]).data.numpy(), self.gpmodel[1])#copy.deepcopy(self.gpmodel[0]))
+
 
                 x, solver, sol = self.find_a_candidate_ca(x_init[i])
                 x = torch.from_numpy(x)
@@ -580,7 +580,7 @@ class BayesOpt(object):
         self.Y = self.run_initial()
         self.gpmodel = []
         for i in range(self.card_of_funcs):
-            self.gpmodel += [copy.deepcopy(self.define_GP(i))]
+            self.gpmodel += [(self.define_GP(i))]
 
         self.gpmodel = self.training()
         x_his_optimal = np.zeros([self.maxfun,self.nx])
@@ -748,7 +748,7 @@ class BayesOpt(object):
             print('ERROR no kernel with name ', kernel)
 
     def GP_predict_ca(self,x,gp):# , X,Y):
-            gp1     = copy.deepcopy(gp)
+            gp1     = (gp) 
             params = self.extract_parameters(gp1)
             X_norm = self.X_norm.detach().numpy()
             Y_norm = gp1.y.detach().numpy()#self.Y_norm.detach().numpy()
