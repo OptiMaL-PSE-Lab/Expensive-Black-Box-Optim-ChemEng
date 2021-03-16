@@ -22,6 +22,48 @@ from test_functions import rosenbrock_constrained, quadratic_constrained
 
 import matplotlib.pyplot as plt
 
+def trust_fig(oracle, bounds):
+    N = 200
+    lim = 2
+    x = np.linspace(-lim, lim, N)
+    y = np.linspace(-lim, lim, N)
+    X,Y = np.meshgrid(x, y)
+    Z = oracle.sample_obj(X,Y)
+    constr = oracle.sample_constr(X,Y)
+
+    level_list = np.logspace(-0.5, 4, 10)
+
+    fig = plt.figure(figsize = (6,4))
+    ax = fig.add_subplot()
+    
+    ax.contour(X,Y,Z*constr, levels = level_list)
+    ax.plot([bounds[0,0], bounds[0, 1]], [bounds[1,0], bounds[1, 0]], c = 'k')
+    ax.plot([bounds[0,0], bounds[0, 1]], [bounds[1,1], bounds[1, 1]], c = 'k')
+    ax.plot([bounds[0,0], bounds[0, 0]], [bounds[1,0], bounds[1, 1]], c = 'k')
+    ax.plot([bounds[0,1], bounds[0, 1]], [bounds[1,0], bounds[1, 1]], c = 'k')
+    
+    return ax
+
+
+class RB:
+    def __init__(self, objective, ineq = []):
+        self.obj = objective ; self.ieq = ineq
+    def sample_obj(self, x, y):
+        return self.obj(x, y)
+    def sample_constr(self, x, y):
+        if self.ieq == []:
+            if (type(x) == float) or (type(x) == int):
+                return 1
+            else:
+                return np.ones(len(x))
+        elif (type(x) == float) or (type(x) == int):
+            temporary = [int(g(x, y)) for g in self.ieq]
+            return np.product(np.array(temporary))
+        else:
+            temporary = [g(x, y).astype(int) for g in self.ieq]
+            return np.product(np.array(temporary), axis = 0)
+
+
 def Problem_rosenbrock(x):
     f1 = rosenbrock_constrained.rosenbrock_f
     g1 = rosenbrock_constrained.rosenbrock_g1
@@ -44,7 +86,7 @@ RB_Nest_list = []
 for i in range(N):
     rnd_seed = i
     RB_Nest = nesterov_random(Problem_rosenbrock, x0, bounds, max_iter = 50, \
-                          constraints = 2)
+                          constraints = 2, rnd_seed = i, alpha = 1e-4)
     RB_Nest_list.append(RB_Nest)
 print('10 Nesterov iterations completed')
 
@@ -53,7 +95,7 @@ RB_simplex_list = []
 for i in range(N):
     rnd_seed = i
     RB_simplex = simplex_method(Problem_rosenbrock, x0, bounds, max_iter = 50, \
-                            constraints = 2)
+                            constraints = 2, rnd_seed = i)
     RB_simplex_list.append(RB_simplex)
 print('10 simplex iterations completed')
 
@@ -102,23 +144,149 @@ for i in range(N):
     Bayes = BayesOpt()
     pyro.set_rng_seed(i)
     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-                        print_iteration = True, constraints=2, casadi=True, maxfun = 40).output_dict
+                        print_iteration = True, constraints=2, casadi=True, maxfun = 20).output_dict
     RB_Bayes_list.append(RB_Bayes)
  
 print('10 BayesOpt iterations completed') 
 
-# RB_Bayes_noCdi_list = []
-# for i in range(N):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(1)
-#     RB_Bayes_noCdi = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-#                         print_iteration = True, constraints=2, casadi=False, maxfun = 40)
-#     RB_Bayes_noCdi_list.append(RB_Bayes_noCdi)
-    
+
+x_best_pyBbyqa = np.array(RB_pybobyqa['x_best_so_far'])
+f_best_pyBbyqa = np.array(RB_pybobyqa['f_best_so_far'])
+nbr_feval_pyBbyqa = len(RB_pybobyqa['f_store'])
+
+x_best_finDiff = np.array(RB_FiniteDiff['x_best_so_far'])
+f_best_finDiff = np.array(RB_FiniteDiff['f_best_so_far'])
+nbr_feval_finDiff = len(RB_FiniteDiff['f_store'])
+
+x_best_BFGS = np.array(RB_BFGS['x_best_so_far'])
+f_best_BFGS = np.array(RB_BFGS['f_best_so_far'])
+nbr_feval_BFGS = len(RB_BFGS['f_store'])
+
+x_best_Adam = np.array(RB_Adam['x_best_so_far'])
+f_best_Adam = np.array(RB_Adam['f_best_so_far'])
+nbr_feval_Adam = len(RB_Adam['f_store'])
+
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax1.plot(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, \
+         label = 'PyBobyqa; #f_eval: ' + str(nbr_feval_pyBbyqa))
+ax1.plot(np.arange(len(f_best_finDiff)), f_best_finDiff, \
+         label = 'Newton Fin. Diff.; #f_eval: ' + str(nbr_feval_finDiff))
+ax1.plot(np.arange(len(f_best_BFGS)), f_best_BFGS, \
+         label = 'BFGS; #f_eval: ' + str(nbr_feval_BFGS))
+ax1.plot(np.arange(len(f_best_Adam)), f_best_Adam, \
+         label = 'Adam; #f_eval: ' + str(nbr_feval_Adam))
+ax1.legend()
+ax1.set_yscale('log')
+
+f_RB = lambda x, y: (1 - x)**2 + 100*(y - x**2)**2
+g1_RB = lambda x, y: (x-1)**3 - y + 1 <= 0
+g2_RB = lambda x, y: x + y - 1.8 <= 0
+
+oracle = RB(f_RB, ineq = [g1_RB, g2_RB])
+
+ax2 = trust_fig(oracle, bounds)
+ax2.plot(x_best_pyBbyqa[:,0], x_best_pyBbyqa[:,1], '--x', \
+         label = 'PyBobyqa; #f_eval: ' + str(nbr_feval_pyBbyqa))
+ax2.plot(x_best_finDiff[:,0], x_best_finDiff[:,1], '--x', \
+         label = 'Newton Fin. Diff.; #f_eval: ' + str(nbr_feval_finDiff))
+ax2.plot(x_best_BFGS[:,0], x_best_BFGS[:,1], '--x', \
+         label = 'BFGS; #f_eval: ' + str(nbr_feval_BFGS))
+ax2.plot(x_best_Adam[:,0], x_best_Adam[:,1], '--x', \
+         label = 'Adam; #f_eval: ' + str(nbr_feval_Adam))
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RB_CUATRO_global_list[i]['x_best_so_far'])
+    f_best = np.array(RB_CUATRO_global_list[i]['f_best_so_far'])
+    nbr_feval = len(RB_CUATRO_global_list[i]['f_store'])
+    ax1.plot(np.arange(len(f_best)), f_best, \
+         label = 'CUATRO_g'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+         label = 'CUATRO_g'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RB_CUATRO_local_list[i]['x_best_so_far'])
+    f_best = np.array(RB_CUATRO_local_list[i]['f_best_so_far'])
+    nbr_feval = len(RB_CUATRO_local_list[i]['f_store'])
+    ax1.plot(np.arange(len(f_best)), f_best, \
+         label = 'CUATRO_l'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+         label = 'CUATRO_l'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(len(RB_Bayes_list)):
+    x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(RB_Bayes_list[i]['f_store'])
+    ax1.plot(np.arange(len(f_best)), f_best, \
+         label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+         label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
     
 
-    
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RB_simplex_list[i]['x_best_so_far'])
+    f_best = np.array(RB_simplex_list[i]['f_best_so_far'])
+    nbr_feval = RB_simplex_list[i]['N_evals']
+    ax1.plot(np.arange(len(f_best)), f_best, \
+         label = 'Simplex'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+         label = 'Simplex'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
 
-    
-plt.plot()
-    
+
+## Change to x_best_So_far
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RB_Nest_list[i]['x_store'])
+    f_best = np.array(RB_Nest_list[i]['f_store'])
+    nbr_feval = RB_Nest_list[i]['N_evals']
+    ax1.plot(np.arange(len(f_best)), f_best, \
+         label = 'Nest.'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+         label = 'Nest.'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+
+
+
+
+
+
+
