@@ -318,19 +318,22 @@ class BayesOpt(object):
             mu, variance = self.GP_predict_ca(x,gp)
 
             fs = self.f_min
-            Y_unscaled = self.Y[:,0]
-            Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
-            fs_norm    = (fs - Y_mean) / (Y_std)
-            fs_norm_ca = SX(fs_norm.data.numpy())
-            mean = mu
-            Delta = fs_norm_ca - mean
-            sigma = sqrt(variance)
+            if fs == inf:
+                ac = 0.
+            else:
+                Y_unscaled = self.Y[:,0]
+                Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
+                fs_norm    = (fs - Y_mean) / (Y_std)
+                fs_norm_ca = SX(fs_norm.data.numpy())
+                mean = mu
+                Delta = fs_norm_ca - mean
+                sigma = sqrt(variance)
 
-            Z = (Delta) / (sigma+1e-5)
-            norm_pdf = exp(-Z**2/2)/sqrt(2*np.pi)
-            norm_cdf = 0.5 * (1+ erf(Z/sqrt(2)))
+                Z = (Delta) / (sigma+1e-5)
+                norm_pdf = exp(-Z**2/2)/sqrt(2*np.pi)
+                norm_cdf = 0.5 * (1+ erf(Z/sqrt(2)))
 
-            ac = -(sigma * norm_pdf + Delta * norm_cdf)
+                ac = -(sigma * norm_pdf + Delta * norm_cdf)
         elif acquisition=='EIC':
             mu, variance = self.GP_predict_ca(x,gp)
 
@@ -448,6 +451,7 @@ class BayesOpt(object):
                     g += [mean]# + slack]
 
                 xx+= [mean]
+                yy+= [mean+2*(var)**0.5]
                 lbg.extend([-inf])
                 ubg.extend([0.])
 
@@ -568,8 +572,11 @@ class BayesOpt(object):
         y = torch.zeros([1, self.card_of_funcs])
         #for i in range(self.card_of_funcs):
         y[0,:] = self.compute_function(xmin, self.set_functions).reshape(-1,)
-        self.X = torch.cat([self.X, xmin.reshape(1,self.nx)])
-        self.Y = torch.cat([self.Y, y])
+        if not (np.linalg.norm(self.X- xmin.reshape(1,self.nx),axis=1)<1e-5).any():
+            self.X = torch.cat([self.X, xmin.reshape(1,self.nx)])
+            self.Y = torch.cat([self.Y, y])
+        else:
+            print('A previous point was found to be optimal')
 
     def run_main(self):
         """
@@ -657,9 +664,15 @@ class BayesOpt(object):
         else:
             for i in range(len(self.X)):
                 y = self.Y[i, 0]
-                if y < min and all(self.Y[i,1:].data.numpy()<=0):
+                if y < min and all(self.Y[i,1:].data.numpy()<=1e-3):
                     min   = y
                     index = i
+        if min==inf:
+            for i in range(len(self.X)):
+                    y = self.Y[i,0]
+                    if y< min:
+                        min   = y
+                        index = i
         if argmin:
             return min, index
         else:
