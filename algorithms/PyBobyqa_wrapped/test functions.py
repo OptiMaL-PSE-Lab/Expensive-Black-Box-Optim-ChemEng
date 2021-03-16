@@ -47,7 +47,7 @@ for i in range(3):
     #
     solution2 = Bayes.solve(Problem_rosenbrock, x0, maxfun=40, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=2, casadi=True)
 
-print("2")
+print("200")
 
 
 #
