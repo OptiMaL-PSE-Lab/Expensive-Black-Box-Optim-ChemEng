@@ -30,7 +30,6 @@ class BayesOpt(object):
               select_kernel='Matern32', acquisition='LCB', casadi=False, constraints = None,
               probabilistic=False, print_iteration=False):
         """
-
         :param objective:           Objective function with numpy inputs
         :type objective:            Function
         :param xo:                  Initial point, not used at the moment
@@ -187,7 +186,7 @@ class BayesOpt(object):
             # gp.util.train(self.gpmodel[i], optimizers)
             # self.gpmodel[i].requires_grad_(True)
 
-            g.append(copy.deepcopy(self.step_train(self.gpmodel[i], X, Y[:,i])))
+            g.append((self.step_train(self.gpmodel[i], X, Y[:,i])) )
             # self.gpmodel[i].requires_grad_(False)
         #     if i ==0:
         #         for j in (g[0].parameters()):
@@ -231,7 +230,7 @@ class BayesOpt(object):
         acquisition = self.acquisition
         X_unscaled  = X_unscaled.reshape((1,-1))
         x           = (X_unscaled - self.X_mean) / self.X_std
-        gp = copy.deepcopy(self.gpmodel[0])
+        gp = (self.gpmodel[0]) 
         if acquisition=='Mean':
             mu, _ = gp(x, full_cov=False, noiseless=False)
             ac = mu
@@ -281,7 +280,7 @@ class BayesOpt(object):
 
                 Y_unscaled = self.Y[:, i]
                 Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
 
                 mean_norm, var_norm = gp_c(x, full_cov=False, noiseless=False)
 
@@ -306,7 +305,7 @@ class BayesOpt(object):
         acquisition = self.acquisition
         #X_unscaled  = X_unscaled.reshape((1,-1))
         x           = X_unscaled#(X_unscaled - self.X_mean) / self.X_std
-        gp = copy.deepcopy(self.gpmodel[0])
+        gp = (self.gpmodel[0]) 
         if acquisition=='Mean':
             mu, _ = self.GP_predict_ca(x, gp)
             ac = mu
@@ -318,19 +317,22 @@ class BayesOpt(object):
             mu, variance = self.GP_predict_ca(x,gp)
 
             fs = self.f_min
-            Y_unscaled = self.Y[:,0]
-            Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
-            fs_norm    = (fs - Y_mean) / (Y_std)
-            fs_norm_ca = SX(fs_norm.data.numpy())
-            mean = mu
-            Delta = fs_norm_ca - mean
-            sigma = sqrt(variance)
+            if fs == inf:
+                ac = 0.
+            else:
+                Y_unscaled = self.Y[:,0]
+                Y_mean, Y_std = Y_unscaled.mean(), Y_unscaled.std()
+                fs_norm    = (fs - Y_mean) / (Y_std)
+                fs_norm_ca = SX(fs_norm.data.numpy())
+                mean = mu
+                Delta = fs_norm_ca - mean
+                sigma = sqrt(variance)
 
-            Z = (Delta) / (sigma+1e-5)
-            norm_pdf = exp(-Z**2/2)/sqrt(2*np.pi)
-            norm_cdf = 0.5 * (1+ erf(Z/sqrt(2)))
+                Z = (Delta) / (sigma+1e-5)
+                norm_pdf = exp(-Z**2/2)/sqrt(2*np.pi)
+                norm_cdf = 0.5 * (1+ erf(Z/sqrt(2)))
 
-            ac = -(sigma * norm_pdf + Delta * norm_cdf)
+                ac = -(sigma * norm_pdf + Delta * norm_cdf)
         elif acquisition=='EIC':
             mu, variance = self.GP_predict_ca(x,gp)
 
@@ -355,7 +357,7 @@ class BayesOpt(object):
                 Y_unscaled = self.Y[:, i]
                 Y_mean, Y_std = SX(Y_unscaled.detach().numpy().mean()),\
                                 SX(Y_unscaled.detach().numpy().std())
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
                 mean_norm, var_norm = self.GP_predict_ca(x, gp_c)
 
                 mean, var = mean_norm * Y_std + Y_mean, var_norm * Y_std ** 2
@@ -437,7 +439,7 @@ class BayesOpt(object):
 
         if self.card_of_funcs>0 and self.acquisition != 'EIC':
             for i in range(1,self.card_of_funcs):#self.model.nk*self.model.nu):
-                gp_c = copy.deepcopy(self.gpmodel[i])
+                gp_c = (self.gpmodel[i]) 
 
                 mean_norm, var_norm = self.GP_predict_ca(U, gp_c)
 
@@ -448,6 +450,7 @@ class BayesOpt(object):
                     g += [mean]# + slack]
 
                 xx+= [mean]
+                yy+= [mean+2*(var)**0.5]
                 lbg.extend([-inf])
                 ubg.extend([0.])
 
@@ -517,7 +520,7 @@ class BayesOpt(object):
             #Find the minimum
             self.f_min = self.find_min_so_far()
             if self.casadi:
-                # self.GP_predict_ca((x_init[0]).data.numpy(), self.gpmodel[1])#copy.deepcopy(self.gpmodel[0]))
+
 
                 x, solver, sol = self.find_a_candidate_ca(x_init[i])
                 x = torch.from_numpy(x)
@@ -562,14 +565,16 @@ class BayesOpt(object):
     def update_data(self, xmin):
         """
         Updates the data set using the new optimum point
-
         """
         xmin = xmin.reshape(-1,)
         y = torch.zeros([1, self.card_of_funcs])
         #for i in range(self.card_of_funcs):
         y[0,:] = self.compute_function(xmin, self.set_functions).reshape(-1,)
-        self.X = torch.cat([self.X, xmin.reshape(1,self.nx)])
-        self.Y = torch.cat([self.Y, y])
+        if not (np.linalg.norm(self.X- xmin.reshape(1,self.nx),axis=1)<1e-5).any():
+            self.X = torch.cat([self.X, xmin.reshape(1,self.nx)])
+            self.Y = torch.cat([self.Y, y])
+        else:
+            print('A previous point was found to be optimal')
 
     def run_main(self):
         """
@@ -580,7 +585,7 @@ class BayesOpt(object):
         self.Y = self.run_initial()
         self.gpmodel = []
         for i in range(self.card_of_funcs):
-            self.gpmodel += [copy.deepcopy(self.define_GP(i))]
+            self.gpmodel += [(self.define_GP(i))]
 
         self.gpmodel = self.training()
         x_his_optimal = np.zeros([self.maxfun,self.nx])
@@ -657,9 +662,15 @@ class BayesOpt(object):
         else:
             for i in range(len(self.X)):
                 y = self.Y[i, 0]
-                if y < min and all(self.Y[i,1:].data.numpy()<=0):
+                if y < min and all(self.Y[i,1:].data.numpy()<=1e-3):
                     min   = y
                     index = i
+        if min==inf:
+            for i in range(len(self.X)):
+                    y = self.Y[i,0]
+                    if y< min:
+                        min   = y
+                        index = i
         if argmin:
             return min, index
         else:
@@ -748,7 +759,7 @@ class BayesOpt(object):
             print('ERROR no kernel with name ', kernel)
 
     def GP_predict_ca(self,x,gp):# , X,Y):
-            gp1     = copy.deepcopy(gp)
+            gp1     = (gp) 
             params = self.extract_parameters(gp1)
             X_norm = self.X_norm.detach().numpy()
             Y_norm = gp1.y.detach().numpy()#self.Y_norm.detach().numpy()

@@ -12,8 +12,8 @@ from test_functions import rosenbrock_constrained, quadratic_constrained
 
 from utilities.general_utility_functions import PenaltyFunctions, plot_generic
 assert pyro.__version__.startswith('1.5.1')
-pyro.enable_validation(True)  # can help with debugging
-pyro.set_rng_seed(1)
+# pyro.enable_validation(True)  # can help with debugging
+# pyro.set_rng_seed(0)
 
 import pybobyqa
 import functools
@@ -35,16 +35,17 @@ f_pen = Penaly_fun.aug_obj#functools.partial(penalized_objective,f1,[g1,g2], 100
 
 
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
-x0 = np.array([0.5,0.5])
-
+x0 = np.array([-0.5,1.5])
 
 soln = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, maxfun=20,constraints=2)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
 
 #solution1 = BayesOpt().solve(f1, x0, bounds=bounds.T, print_iteration=True, constraints=[g1,g2])
 #
-Bayes = BayesOpt()
-#
-solution2 = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=2, casadi=True)
+
+for i in range(3):
+    Bayes = BayesOpt()
+    #
+    solution2 = Bayes.solve(Problem_rosenbrock, x0, maxfun=40, acquisition='EI',bounds=bounds.T, print_iteration=True, constraints=2, casadi=True)
 
 print("2")
 

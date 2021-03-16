@@ -1,11 +1,12 @@
 import numpy as np 
-import sys
-sys.path.insert(1, 'utilities')
-from general_utility_functions import PenaltyFunctions
+# import sys
+# sys.path.insert(1, 'utilities')
+from utilities.general_utility_functions import PenaltyFunctions
 
 
-def nesterov_random(f,x0,bounds,max_iter,constraints):
-
+def nesterov_random(f,x0,bounds,max_iter,constraints, alpha = 0.001, mu = 0.001, rnd_seed = 0):
+    np.random.seed(rnd_seed)
+    
     f_aug = PenaltyFunctions(f,type_penalty='l2',mu=1e3)
     
     d = len(x0)
@@ -15,8 +16,6 @@ def nesterov_random(f,x0,bounds,max_iter,constraints):
     f_store = np.zeros(max_iter)
     x = x0
     f_eval_count = 0 
-    alpha = 0.001
-    mu = 0.001
     for i in range(max_iter):
 
         x_store[i,:] = x

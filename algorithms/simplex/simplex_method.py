@@ -1,9 +1,9 @@
 import numpy as np 
-import sys
-sys.path.insert(1, 'utilities')
-from general_utility_functions import PenaltyFunctions
+# import sys
+# sys.path.insert(1, 'utilities')
+from utilities.general_utility_functions import PenaltyFunctions
     
-def simplex_method(f,x0,bounds,max_iter,constraints):
+def simplex_method(f,x0,bounds,max_iter,constraints, rnd_seed = 0):
     '''
     INPUTS
     ------------------------------------
@@ -42,6 +42,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints):
      - Stored function values at each iteration are not the penalised objective
         but the objective function itself.
     '''
+    np.random.seed(rnd_seed)
+    
     f_aug = PenaltyFunctions(f,type_penalty='l2',mu=1e3)
     
     bounds = np.array(bounds)   # converting to numpy if not 

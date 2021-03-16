@@ -1,10 +1,10 @@
-import sys
-sys.path.insert(1, 'test_functions')
-sys.path.insert(1, 'algorithms/simplex')
+# import sys
+# sys.path.insert(1, 'test_functions')
+# sys.path.insert(1, 'algorithms/simplex')
 import numpy as np 
-from quadratic_constrained import * 
-from rosenbrock_constrained import * 
-from simplex_method import *
+from test_functions.quadratic_constrained import * 
+from test_functions.rosenbrock_constrained import * 
+from algorithms.simplex.simplex_method import simplex_method
 
 d = 2
 its = 50 
