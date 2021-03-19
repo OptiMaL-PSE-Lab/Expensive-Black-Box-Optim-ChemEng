@@ -227,6 +227,9 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
     best_f = f_list.copy()
     best_g = g_list.copy()
     
+    nbr_samples_list = []
+    nbr_samples_list += [len(f_list)]
+    
     if constraints != []:
         b = evaluate_bounds(x, constraints, con_weight = con_weight)
     else:
@@ -251,7 +254,7 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
     
     best_x, best_f, best_g = update_best_lists(x_list, f_list, g_list, \
                                                best_x, best_f, best_g)
-    
+    nbr_samples_list += [len(f_list)]
     
     while (len(f_list) < max_f_eval) and (np.linalg.norm(gradient) > tolerance):
        x = np.array(x_list[-1]).reshape(len(x0),)
@@ -285,6 +288,7 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
        
        best_x, best_f, best_g = update_best_lists(x_list, f_list, g_list, \
                                                   best_x, best_f, best_g)
+       nbr_samples_list += [len(f_list)]
        
     solution_output = {}
     solution_output['x_store'] = x_list
@@ -295,6 +299,7 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
     solution_output['g_best_so_far'] = best_g
     solution_output['N_eval'] = len(f_list)
     solution_output['TR'] = None
+    solution_output['samples_at_iteration'] = nbr_samples_list
 
     return solution_output
  
@@ -326,6 +331,9 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
     best_x = x_list.copy()
     best_f = f_list.copy()
     best_g = g_list.copy()
+    
+    nbr_samples_list = []
+    nbr_samples_list += [len(f_list)]
     
     if constraints != []:
         b = evaluate_bounds(x, constraints, con_weight = con_weight)
@@ -373,6 +381,7 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
  
        best_x, best_f, best_g = update_best_lists(x_list, f_list, g_list, \
                                                   best_x, best_f, best_g)
+           
        if constraints != []:
            b = evaluate_bounds(x, constraints, con_weight = con_weight)
        else:
@@ -385,6 +394,10 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
                                                              Hessian = False, \
                                                              con_weight = con_weight, \
                                                              current_f = curr_f)
+           
+       nbr_samples_list += [len(f_list)] 
+       
+       
     solution_output = {}
     solution_output['x_store'] = x_list
     solution_output['f_store'] = f_list
@@ -394,6 +407,7 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
     solution_output['g_best_so_far'] = best_g
     solution_output['N_evals'] = len(f_list)
     solution_output['TR'] = None
+    solution_output['samples_at_iteration'] = nbr_samples_list
     
     return solution_output   
 
@@ -425,6 +439,9 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     best_f = f_list.copy()
     best_g = g_list.copy()
     
+    nbr_samples_list = []
+    nbr_samples_list += [len(f_list)]  
+    
     if constraints != []:
         b = evaluate_bounds(x, constraints, con_weight = con_weight)
     else:
@@ -453,6 +470,7 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     
     best_x, best_f, best_g = update_best_lists(x_list, f_list, g_list, \
                                                   best_x, best_f, best_g)
+    nbr_samples_list += [len(f_list)]  
         
     x = np.array(x_list[-1])
     
@@ -497,6 +515,7 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     
        best_x, best_f, best_g = update_best_lists(x_list, f_list, g_list, \
                                                   best_x, best_f, best_g)
+       nbr_samples_list += [len(f_list)]  
        
        x = np.array(x_list[-1])
     
@@ -510,6 +529,7 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     solution_output['g_best_so_far'] = best_g
     solution_output['N_evals'] = len(f_list)
     solution_output['TR'] = None
+    solution_output['samples_at_iteration'] = nbr_samples_list
     
     return solution_output   
 

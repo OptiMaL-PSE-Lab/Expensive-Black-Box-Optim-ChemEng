@@ -3,7 +3,7 @@ import numpy as np
 # sys.path.insert(1, 'utilities')
 from utilities.general_utility_functions import PenaltyFunctions
     
-def simplex_method(f,x0,bounds,max_iter,constraints, rnd_seed = 0):
+def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, rnd_seed = 0):
     '''
     INPUTS
     ------------------------------------
@@ -59,6 +59,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, rnd_seed = 0):
     f_best_so_far = np.zeros(max_iter)      # initialising function store
     x_best_so_far = np.zeros((max_iter,d))
     g_best_so_far = np.zeros((max_iter,con_d))
+    nbr_samples = np.zeros(max_iter)
 
 
     # evaluating function 
@@ -68,6 +69,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints, rnd_seed = 0):
         
     
     for its in range(max_iter):
+        
+        
         
         sorted_nodes = np.argsort(f_nodes[:,0])
         best_nodes = x_nodes[sorted_nodes[:-1]]
@@ -121,14 +124,20 @@ def simplex_method(f,x0,bounds,max_iter,constraints, rnd_seed = 0):
             if f_contracted < f_nodes[sorted_nodes[-1]]:
                 x_nodes[sorted_nodes[-1],:] = x_contracted
                 f_nodes[sorted_nodes[-1],:] = f_contracted
-                
+             
+        nbr_samples[its] = f_eval_count
+        if f_eval_count >= max_f_eval:
+            break
+        
    # computing final constraint violation 
     output_dict = {}
-    output_dict['g_store'] = g_store
-    output_dict['x_store'] = x_store
-    output_dict['f_store'] = f_store 
-    output_dict['g_best_so_far'] = g_best_so_far
-    output_dict['x_best_so_far'] = x_best_so_far
-    output_dict['f_best_so_far'] = f_best_so_far
+    output_dict['g_store'] = g_store[:its+1]
+    output_dict['x_store'] = x_store[:its+1]
+    output_dict['f_store'] = f_store[:its+1]
+    output_dict['g_best_so_far'] = g_best_so_far[:its+1]
+    output_dict['x_best_so_far'] = x_best_so_far[:its+1]
+    output_dict['f_best_so_far'] = f_best_so_far[:its+1]
     output_dict['N_evals'] = f_eval_count
+    output_dict['samples_at_iteration'] = nbr_samples[:its+1]
+    
     return output_dict

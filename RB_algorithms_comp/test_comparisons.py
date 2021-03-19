@@ -6,6 +6,7 @@ Created on Tue Mar 16 11:13:37 2021
 """
 
 import numpy as np
+import pickle
 
 import pyro
 pyro.enable_validation(True)  # can help with debugging
@@ -15,12 +16,16 @@ from algorithms.PyBobyqa_wrapped.Wrapper_for_pybobyqa import PyBobyqaWrapper
 from algorithms.Bayesian_opt_Pyro.utilities_full import BayesOpt
 from algorithms.nesterov_random.nesterov_random import nesterov_random
 from algorithms.simplex.simplex_method import simplex_method
-from algorithms.CUATRO import CUATRO
-from algorithms.Finite_differences import finite_Diff_Newton, Adam_optimizer, BFGS_optimizer
+from algorithms.CUATRO.CUATRO import CUATRO
+from algorithms.Finite_differences.Finite_differences import finite_Diff_Newton
+from algorithms.Finite_differences.Finite_differences import Adam_optimizer
+from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
 
 from test_functions import rosenbrock_constrained, quadratic_constrained
 
 import matplotlib.pyplot as plt
+
+import pickle
 
 def trust_fig(oracle, bounds):
     N = 200
@@ -143,40 +148,54 @@ RB_Bayes_list = []
 for i in range(N):
     Bayes = BayesOpt()
     pyro.set_rng_seed(i)
+    
+    if i<3:
+        nbr_feval = 40
+    elif i<6:
+        nbr_feval = 30
+    else:
+        nbr_feval = 20
+    
     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-                        print_iteration = True, constraints=2, casadi=True, maxfun = 20).output_dict
+                            print_iteration = True, constraints=2, casadi=True, \
+                            maxfun = nbr_feval, ).output_dict
     RB_Bayes_list.append(RB_Bayes)
  
-print('10 BayesOpt iterations completed') 
+print('10 BayesOpt iterations completed')
+
+with open('BayesRB_list.pickle', 'wb') as handle:
+    pickle.dump(RB_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
 x_best_pyBbyqa = np.array(RB_pybobyqa['x_best_so_far'])
 f_best_pyBbyqa = np.array(RB_pybobyqa['f_best_so_far'])
-nbr_feval_pyBbyqa = len(RB_pybobyqa['f_store'])
+# x_ind_pyBbyqa = np.array(RB_pybobyqa['samples_at_iteration'])
+# nbr_feval_pyBbyqa = len(RB_pybobyqa['f_store'])
 
 x_best_finDiff = np.array(RB_FiniteDiff['x_best_so_far'])
 f_best_finDiff = np.array(RB_FiniteDiff['f_best_so_far'])
-nbr_feval_finDiff = len(RB_FiniteDiff['f_store'])
+x_ind_findDiff = np.array(RB_FiniteDiff['samples_at_iteration'])
 
 x_best_BFGS = np.array(RB_BFGS['x_best_so_far'])
 f_best_BFGS = np.array(RB_BFGS['f_best_so_far'])
-nbr_feval_BFGS = len(RB_BFGS['f_store'])
+x_ind_BFGS = np.array(RB_BFGS['samples_at_iteration'])
 
 x_best_Adam = np.array(RB_Adam['x_best_so_far'])
 f_best_Adam = np.array(RB_Adam['f_best_so_far'])
-nbr_feval_Adam = len(RB_Adam['f_store'])
+x_ind_Adam = np.array(RB_Adam['samples_at_iteration'])
 
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax1.plot(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, \
-         label = 'PyBobyqa; #f_eval: ' + str(nbr_feval_pyBbyqa))
-ax1.plot(np.arange(len(f_best_finDiff)), f_best_finDiff, \
-         label = 'Newton Fin. Diff.; #f_eval: ' + str(nbr_feval_finDiff))
-ax1.plot(np.arange(len(f_best_BFGS)), f_best_BFGS, \
-         label = 'BFGS; #f_eval: ' + str(nbr_feval_BFGS))
-ax1.plot(np.arange(len(f_best_Adam)), f_best_Adam, \
-         label = 'Adam; #f_eval: ' + str(nbr_feval_Adam))
+ax1.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
+         label = 'PyBobyqa')
+ax1.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
+         label = 'Newton Fin. Diff.')
+ax1.step(x_ind_BFGS, f_best_BFGS, where = 'post', \
+         label = 'BFGS')
+ax1.step(x_ind_Adam, f_best_Adam, where = 'post', \
+         label = 'Adam')
 ax1.legend()
 ax1.set_yscale('log')
 
@@ -188,13 +207,13 @@ oracle = RB(f_RB, ineq = [g1_RB, g2_RB])
 
 ax2 = trust_fig(oracle, bounds)
 ax2.plot(x_best_pyBbyqa[:,0], x_best_pyBbyqa[:,1], '--x', \
-         label = 'PyBobyqa; #f_eval: ' + str(nbr_feval_pyBbyqa))
+         label = 'PyBobyqa')
 ax2.plot(x_best_finDiff[:,0], x_best_finDiff[:,1], '--x', \
-         label = 'Newton Fin. Diff.; #f_eval: ' + str(nbr_feval_finDiff))
+         label = 'Newton Fin. Diff.')
 ax2.plot(x_best_BFGS[:,0], x_best_BFGS[:,1], '--x', \
-         label = 'BFGS; #f_eval: ' + str(nbr_feval_BFGS))
+         label = 'BFGS')
 ax2.plot(x_best_Adam[:,0], x_best_Adam[:,1], '--x', \
-         label = 'Adam; #f_eval: ' + str(nbr_feval_Adam))
+         label = 'Adam')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
@@ -203,31 +222,30 @@ ax2.set_ylim(bounds[1])
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2 = trust_fig(oracle, bounds)
-for i in range(N):
+for i in range(len(RB_CUATRO_global_list)):
     x_best = np.array(RB_CUATRO_global_list[i]['x_best_so_far'])
     f_best = np.array(RB_CUATRO_global_list[i]['f_best_so_far'])
-    nbr_feval = len(RB_CUATRO_global_list[i]['f_store'])
-    ax1.plot(np.arange(len(f_best)), f_best, \
-         label = 'CUATRO_g'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-         label = 'CUATRO_g'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    x_ind = np.array(RB_CUATRO_global_list[i]['samples_at_iteration'])
+    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
+    ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 
+
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2 = trust_fig(oracle, bounds)
-for i in range(N):
+for i in range(len(RB_CUATRO_local_list)):
     x_best = np.array(RB_CUATRO_local_list[i]['x_best_so_far'])
     f_best = np.array(RB_CUATRO_local_list[i]['f_best_so_far'])
-    nbr_feval = len(RB_CUATRO_local_list[i]['f_store'])
-    ax1.plot(np.arange(len(f_best)), f_best, \
-         label = 'CUATRO_l'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-         label = 'CUATRO_l'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    x_ind = np.array(RB_CUATRO_local_list[i]['samples_at_iteration'])
+    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
+    ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
@@ -241,10 +259,10 @@ for i in range(len(RB_Bayes_list)):
     x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
     f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
     nbr_feval = len(RB_Bayes_list[i]['f_store'])
-    ax1.plot(np.arange(len(f_best)), f_best, \
-         label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-         label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
@@ -255,14 +273,12 @@ ax2.set_ylim(bounds[1])
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2 = trust_fig(oracle, bounds)
-for i in range(N):
+for i in range(len(RB_simplex_list)):
     x_best = np.array(RB_simplex_list[i]['x_best_so_far'])
     f_best = np.array(RB_simplex_list[i]['f_best_so_far'])
-    nbr_feval = RB_simplex_list[i]['N_evals']
-    ax1.plot(np.arange(len(f_best)), f_best, \
-         label = 'Simplex'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-         label = 'Simplex'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    x_ind = np.array(RB_simplex_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Simplex'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Simplex'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
@@ -273,19 +289,19 @@ fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2 = trust_fig(oracle, bounds)
 for i in range(N):
-    x_best = np.array(RB_Nest_list[i]['x_store'])
-    f_best = np.array(RB_Nest_list[i]['f_store'])
-    nbr_feval = RB_Nest_list[i]['N_evals']
-    ax1.plot(np.arange(len(f_best)), f_best, \
-         label = 'Nest.'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-         label = 'Nest.'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    x_best = np.array(RB_Nest_list[i]['x_best_so_far'])
+    f_best = np.array(RB_Nest_list[i]['f_best_so_far'])
+    x_ind = np.array(RB_Nest_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Nest.'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Nest.'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
 
 
 
+# with open('BayesRB_list.pickle', 'rb') as handle:
+#     RB_Bayes_list_ = pickle.load(handle)
 
 
 

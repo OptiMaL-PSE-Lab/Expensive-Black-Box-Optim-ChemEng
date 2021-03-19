@@ -71,9 +71,9 @@ def update_best_lists(X_list, f_list, g_list, X_best, f_best, g_best):
     g_feas = constr_creation(X_list, g_list)
     f = np.array(f_list)
     ind = np.where(f == np.min(f[g_feas == 1]))
-    X_best += np.array(X_list)[ind].tolist()
-    f_best += f[ind].tolist()
-    g_best += np.array(g_list)[ind].tolist()
+    X_best += np.array(X_list)[ind].tolist()[:1]
+    f_best += f[ind].tolist()[:1]
+    g_best += np.array(g_list)[ind].tolist()[:1]
     
     return X_best, f_best, g_best
 
@@ -322,6 +322,8 @@ def sample_simulation(x, sim):
         f_list += [obj]
         if constr_vec is not None:
             g_list = [constr_vec]
+        # print('Yes')
+        
     else:
         for x_ in x:
             obj, constr_vec = sim(x_)
@@ -336,11 +338,14 @@ def sample_simulation(x, sim):
     return f_list, g_list, feas
 
 
-
 def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
+           # X_samples_list = [], f_eval_list = [], g_eval_list = [], \
+           # best_x = [], best_f = [], best_g = [], \
+           # radius_list = [], nbr_samples_list = [], \
            max_f_eval = 100, max_iter = 100, tolerance = 1e-8, beta_inc = 1.2, \
            beta_red = 0.8, eta1 = 0.2, eta2 = 0.8, method = 'local', \
-           N_min_samples = 6, rnd = 1, print_status = False, constr_handling = 'Discrimination'):
+           N_min_samples = 6, rnd = 1, print_status = False, \
+           constr_handling = 'Discrimination'):
     '''
     INPUTS
     ------------------------------------
@@ -417,22 +422,33 @@ def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
     
     # oracle = oracle_sample(f, ineq = constraints)
     
-    center = list(x0) ; radius = init_radius
+    X_samples_list = [] ; f_eval_list = [] ; g_eval_list = []
+    best_x = [] ; best_f = [] ; best_g = []
+    radius_list = [] ; nbr_samples_list = []
     
-    f_eval_list, g_eval_list, feas = sample_simulation(center, sim)
+    np.random.seed(rnd)
+    
+    center_ = list(x0) ; radius = init_radius
+    center = [float(c) for c in center_]
+    
+    f_eval, g_eval, feas = sample_simulation(center, sim)
+    new_f = f_eval[0]
     
     if feas == 0:
         raise ValueError("Please enter feasible starting point")
     
-    X_samples_list = [center]
-    # f_eval_list = oracle.sample_obj(center)
-    # g_eval_list = oracle.sample_g(center)
+    X_samples_list += [center]
+    f_eval_list += [new_f]
+    g_eval_list += g_eval
     
     best_x = X_samples_list.copy()
     best_f = f_eval_list.copy()
     best_g = g_eval_list.copy()
         
-    radius_list = [init_radius]
+    radius_list += [init_radius]
+    nbr_samples_list += [len(f_eval_list)]
+    
+    
     
     if method == 'local':
         X_samples, y_samples, g_eval, feas =  sample_points(center, radius, sim, \
@@ -490,6 +506,10 @@ def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
     N = 1
     
     while (len(f_eval_list) < max_f_eval - 1) and (N <= max_iter) and (radius > tolerance):
+        
+        rnd += 1
+        np.random.seed(rnd)
+        
         if method == 'local':
             if (new_feas == 0) or (new_f - old_f > 0):
                 radius *= beta_red
@@ -513,9 +533,11 @@ def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
             else:
                 old_trust = center
                 old_f = new_f
-            
+        
+        
         radius_list += [radius]
-
+        nbr_samples_list += [len(f_eval_list)]
+        
         if P is not None:
             X = np.array(old_trust).reshape(-1,1)
             old_pred_f = X.T @ P @ X + q.T @ X + r
@@ -588,6 +610,7 @@ def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
     
     N_evals = len(f_eval_list)
     radius_list += [radius] 
+    nbr_samples_list += [len(f_eval_list)]
    
     if N > max_iter:
         status = "Max # of iterations reached"
@@ -602,7 +625,8 @@ def CUATRO(sim, x0, init_radius, constraints = [], bounds = None, \
     output = {'x_best_so_far': best_x, 'f_best_so_far': best_f, \
               'g_best_so_far': best_g, 'x_store': X_samples_list, \
               'f_store': f_eval_list, 'g_store': g_eval_list, \
-              'N_eval': N_evals, 'N_iter': N, 'TR': radius_list}
+              'N_eval': N_evals, 'N_iter': N, 'TR': radius_list, \
+              'samples_at_iteration': nbr_samples_list}
     
     return output
 
