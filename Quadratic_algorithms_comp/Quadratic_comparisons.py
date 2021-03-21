@@ -84,22 +84,24 @@ max_it = 50
 
 quadratic_pybobyqa = PyBobyqaWrapper().solve(Problem_quadratic, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2)
-
+# print(x0)
+    
 N = 10
 quadratic_Nest_list = []
 for i in range(N):
     rnd_seed = i
     quadratic_Nest = nesterov_random(Problem_quadratic, x0, bounds, max_iter = 50, \
-                          constraints = 2, rnd_seed = i, alpha = 1e-4)
+                          constraints = 1, rnd_seed = i, alpha = 1e-3, mu = 1e-2)
     quadratic_Nest_list.append(quadratic_Nest)
 print('10 Nesterov iterations completed')
+# print(x0)
 
 N = 10
 quadratic_simplex_list = []
 for i in range(N):
     rnd_seed = i
     quadratic_simplex = simplex_method(Problem_quadratic, x0, bounds, max_iter = 50, \
-                            constraints = 2, rnd_seed = i)
+                            constraints = 1, rnd_seed = i)
     quadratic_simplex_list.append(quadratic_simplex)
 print('10 simplex iterations completed')
 
@@ -128,42 +130,56 @@ for i in range(N):
     quadratic_CUATRO_global_list.append(quadratic_CUATRO_global)
 print('10 CUATRO global iterations completed')    
     
+# N_min_s = 6
+# init_radius = 0.1
+# method = 'Fitting'
+# N = 10
+# quadratic_CUATRO_local_list = []
+# for i in range(N):
+#     rnd_seed = i
+#     quadratic_CUATRO_local = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
+#                           N_min_samples = N_min_s, tolerance = 1e-10,\
+#                           beta_red = 0.9, rnd = rnd_seed, method = 'local', \
+#                           constr_handling = method)
+#     quadratic_CUATRO_local_list.append(quadratic_CUATRO_local)
+# print('10 CUATRO local iterations completed') 
+
 N_min_s = 6
-init_radius = 0.1
+init_radius = 1
 method = 'Fitting'
 N = 10
-quadratic_CUATRO_local_list = []
+quadratic_CUATRO_local_list1 = []
 for i in range(N):
     rnd_seed = i
-    quadratic_CUATRO_local = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
+    quadratic_CUATRO_local1 = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.9, rnd = rnd_seed, method = 'local', \
+                          beta_red = 0.5, rnd = rnd_seed, method = 'local', \
                           constr_handling = method)
-    quadratic_CUATRO_local_list.append(quadratic_CUATRO_local)
+    quadratic_CUATRO_local_list1.append(quadratic_CUATRO_local1)
 print('10 CUATRO local iterations completed') 
 
-# N = 10
-# quadratic_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
+N = 10
+quadratic_Bayes_list = []
+for i in range(1):
+    Bayes = BayesOpt()
+    pyro.set_rng_seed(i)
     
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
+    if i<3:
+        nbr_feval = 40
+    elif i<6:
+        nbr_feval = 30
+    else:
+        nbr_feval = 20
     
-#     quadratic_Bayes = Bayes.solve(Problem_quadratic, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     quadratic_Bayes_list.append(quadratic_Bayes)
+    quadratic_Bayes = Bayes.solve(Problem_quadratic, x0, acquisition='EI',bounds=bounds.T, \
+                            print_iteration = True, constraints= 1, casadi=True, \
+                            maxfun = nbr_feval, ).output_dict
+    quadratic_Bayes_list.append(quadratic_Bayes)
  
-# print('10 BayesOpt iterations completed')
+print('10 BayesOpt iterations completed')
 
-# with open('BayesQuadratic_list.pickle', 'wb') as handle:
-#     pickle.dump(quadratic_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('BayesQuadraticTight_list.pickle', 'wb') as handle:
+    pickle.dump(quadratic_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
@@ -232,13 +248,29 @@ ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 
 
+# fig1 = plt.figure()
+# ax1 = fig1.add_subplot()
+# ax2 = trust_fig(oracle, bounds)
+# for i in range(len(quadratic_CUATRO_local_list)):
+#     x_best = np.array(quadratic_CUATRO_local_list[i]['x_best_so_far'])
+#     f_best = np.array(quadratic_CUATRO_local_list[i]['f_best_so_far'])
+#     x_ind = np.array(quadratic_CUATRO_local_list[i]['samples_at_iteration'])
+#     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
+#     # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
+#     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
+# ax1.legend()
+# ax1.set_yscale('log')
+# ax2.legend()
+# ax2.set_xlim(bounds[0])
+# ax2.set_ylim(bounds[1])
+
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2 = trust_fig(oracle, bounds)
-for i in range(len(quadratic_CUATRO_local_list)):
-    x_best = np.array(quadratic_CUATRO_local_list[i]['x_best_so_far'])
-    f_best = np.array(quadratic_CUATRO_local_list[i]['f_best_so_far'])
-    x_ind = np.array(quadratic_CUATRO_local_list[i]['samples_at_iteration'])
+for i in range(len(quadratic_CUATRO_local_list1)):
+    x_best = np.array(quadratic_CUATRO_local_list1[i]['x_best_so_far'])
+    f_best = np.array(quadratic_CUATRO_local_list1[i]['f_best_so_far'])
+    x_ind = np.array(quadratic_CUATRO_local_list1[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
@@ -248,22 +280,22 @@ ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2 = trust_fig(oracle, bounds)
-# for i in range(len(quadratic_Bayes_list)):
-#     x_best = np.array(quadratic_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(quadratic_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(quadratic_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2 = trust_fig(oracle, bounds)
+for i in range(len(quadratic_Bayes_list)):
+    x_best = np.array(quadratic_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(quadratic_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(quadratic_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
     
 
 fig1 = plt.figure()

@@ -3,7 +3,8 @@ import numpy as np
 # sys.path.insert(1, 'utilities')
 from utilities.general_utility_functions import PenaltyFunctions
     
-def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, rnd_seed = 0):
+def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
+                   mu_con = 1e3, rnd_seed = 0):
     '''
     INPUTS
     ------------------------------------
@@ -44,7 +45,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, rnd_seed 
     '''
     np.random.seed(rnd_seed)
     
-    f_aug = PenaltyFunctions(f,type_penalty='l2',mu=1e3)
+    f_aug = PenaltyFunctions(f,type_penalty='l2', mu= mu_con)
     
     bounds = np.array(bounds)   # converting to numpy if not 
     d = len(x0)                 # dimension 
