@@ -30,7 +30,8 @@ def nesterov_random(f,x0,bounds,max_iter,constraints, alpha = 0.001, mu = 0.001,
         f_eval_count += 1
         
         u = np.random.normal(0,1,(1,d))
-        B = np.array([[1,0],[0,1]])
+        B = np.eye(d)
+        # B = np.array([[1,0],[0,1]])
         forw = (x + mu * u)[0,:]
         back = (x - mu * u)[0,:]
         
@@ -53,7 +54,6 @@ def nesterov_random(f,x0,bounds,max_iter,constraints, alpha = 0.001, mu = 0.001,
             
         g = ((f_forw - f_back)/(2*mu))*B@u.T
         x = x - alpha * (g.T)[0,:]
-        
         
         feas = np.product( (np.array(g_store[:(i+1)*3]) <= 0).astype(int), axis = 1)
         # print(i, f_store)

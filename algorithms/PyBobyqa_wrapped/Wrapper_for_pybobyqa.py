@@ -75,6 +75,7 @@ class PyBobyqaWrapper:
         output_dict['f_best_so_far'] = f_so_far
         output_dict['x_best_so_far'] = np.array([sol.diagnostic_info['xk'].tolist()])[0].astype('d')
         output_dict['TR']            = np.array([sol.diagnostic_info['delta'].tolist()])[0].astype('d')
+        output_dict['samples_at_iteration']            = np.arange(1, 1+len(f_so_far))
         return output_dict
 
 

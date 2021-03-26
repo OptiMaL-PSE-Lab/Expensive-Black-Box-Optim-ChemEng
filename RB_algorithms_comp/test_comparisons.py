@@ -49,6 +49,28 @@ def trust_fig(oracle, bounds):
     
     return ax
 
+def average_from_list(solutions_list):
+    N = len(solutions_list)
+    f_best_all = np.zeros((N, 100))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+    f_median = np.median(f_best_all, axis = 0)
+    # f_av = np.average(f_best_all, axis = 0)
+    # f_std = np.std(f_best_all, axis = 0)
+    f_min = np.min(f_best_all, axis = 0)
+    f_max = np.max(f_best_all, axis = 0)
+    return f_best_all, f_median, f_min, f_max
+            
+    
+    
+
 
 class RB:
     def __init__(self, objective, ineq = []):
@@ -85,13 +107,13 @@ max_it = 50
 
 RB_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2)
-
+max_f_eval = 100
 N = 10
 RB_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    RB_Nest = nesterov_random(Problem_rosenbrock, x0, bounds, max_iter = 50, \
-                          constraints = 2, rnd_seed = i, alpha = 1e-4)
+    RB_Nest = nesterov_random(Problem_rosenbrock, x0, bounds, max_iter = 100, \
+                          constraints = 2, rnd_seed = i, alpha = 1e-4, max_f_eval= max_f_eval)
     RB_Nest_list.append(RB_Nest)
 print('10 Nesterov iterations completed')
 
@@ -99,8 +121,8 @@ N = 10
 RB_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    RB_simplex = simplex_method(Problem_rosenbrock, x0, bounds, max_iter = 50, \
-                            constraints = 2, rnd_seed = i)
+    RB_simplex = simplex_method(Problem_rosenbrock, x0, bounds, max_iter = 100, \
+                            constraints = 2, rnd_seed = i, max_f_eval= max_f_eval)
     RB_simplex_list.append(RB_simplex)
 print('10 simplex iterations completed')
 
@@ -143,28 +165,31 @@ for i in range(N):
     RB_CUATRO_local_list.append(RB_CUATRO_local)
 print('10 CUATRO local iterations completed') 
 
-N = 10
-RB_Bayes_list = []
-for i in range(N):
-    Bayes = BayesOpt()
-    pyro.set_rng_seed(i)
-    
-    if i<3:
-        nbr_feval = 40
-    elif i<6:
-        nbr_feval = 30
-    else:
-        nbr_feval = 20
-    
-    RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=2, casadi=True, \
-                            maxfun = nbr_feval, ).output_dict
-    RB_Bayes_list.append(RB_Bayes)
- 
-print('10 BayesOpt iterations completed')
+with open('BayesRB_list.pickle', 'rb') as handle:
+    RB_Bayes_list = pickle.load(handle)
 
-with open('BayesRB_list.pickle', 'wb') as handle:
-    pickle.dump(RB_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# N = 10
+# RB_Bayes_list = []
+# for i in range(1):
+#     Bayes = BayesOpt()
+#     pyro.set_rng_seed(i)
+    
+#     if i<3:
+#         nbr_feval = 40
+#     elif i<6:
+#         nbr_feval = 30
+#     else:
+#         nbr_feval = 20
+    
+#     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
+#                             print_iteration = True, constraints=2, casadi=True, \
+#                             maxfun = nbr_feval, ).output_dict
+#     RB_Bayes_list.append(RB_Bayes)
+ 
+# print('10 BayesOpt iterations completed')
+
+# with open('BayesRB_list.pickle', 'wb') as handle:
+#     pickle.dump(RB_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
@@ -226,8 +251,8 @@ for i in range(len(RB_CUATRO_global_list)):
     x_best = np.array(RB_CUATRO_global_list[i]['x_best_so_far'])
     f_best = np.array(RB_CUATRO_global_list[i]['f_best_so_far'])
     x_ind = np.array(RB_CUATRO_global_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
@@ -243,8 +268,8 @@ for i in range(len(RB_CUATRO_local_list)):
     x_best = np.array(RB_CUATRO_local_list[i]['x_best_so_far'])
     f_best = np.array(RB_CUATRO_local_list[i]['f_best_so_far'])
     x_ind = np.array(RB_CUATRO_local_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
-    ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
@@ -252,22 +277,22 @@ ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 
-fig1 = plt.figure()
-ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(len(RB_Bayes_list)):
-    x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
-    f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
-    nbr_feval = len(RB_Bayes_list[i]['f_store'])
-    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-ax1.legend()
-ax1.set_yscale('log')
-ax2.legend()
-ax2.set_xlim(bounds[0])
-ax2.set_ylim(bounds[1])
+# fig1 = plt.figure()
+# ax1 = fig1.add_subplot()
+# ax2 = trust_fig(oracle, bounds)
+# for i in range(len(RB_Bayes_list)):
+#     x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
+#     f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
+#     nbr_feval = len(RB_Bayes_list[i]['f_store'])
+#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
+#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+# ax1.legend()
+# ax1.set_yscale('log')
+# ax2.legend()
+# ax2.set_xlim(bounds[0])
+# ax2.set_ylim(bounds[1])
     
 
 fig1 = plt.figure()
@@ -298,11 +323,53 @@ ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
 
+sol_Cg = average_from_list(RB_CUATRO_global_list)
+test_CUATROg, test_av_CUATROg, test_min_CUATROg, test_max_CUATROg = sol_Cg
+sol_Cl = average_from_list(RB_CUATRO_local_list)
+test_CUATROl, test_av_CUATROl, test_min_CUATROl, test_max_CUATROl = sol_Cl
+sol_Nest = average_from_list(RB_Nest_list)
+test_Nest, test_av_Nest, test_min_Nest, test_max_Nest = sol_Nest
+sol_Splx = average_from_list(RB_simplex_list)
+test_Splx, test_av_Splx, test_min_Splx, test_max_Splx = sol_Splx
 
 
-# with open('BayesRB_list.pickle', 'rb') as handle:
-#     RB_Bayes_list_ = pickle.load(handle)
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
+                test_max_CUATROg, color = 'b', alpha = .5)
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
+                test_max_CUATROl, color = 'r', alpha = .5)
+ax.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
+         label = 'Newton Fin. Diff.', c = 'black')
+ax.step(x_ind_BFGS, f_best_BFGS, where = 'post', \
+         label = 'BFGS', c = 'orange')
+ax.step(x_ind_Adam, f_best_Adam, where = 'post', \
+         label = 'Adam', c = 'green')   
+ax.legend()
+ax.set_yscale('log')
+ax.set_xlim([0, 99])    
+    
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
+ax.fill_between(np.arange(1, 101), test_min_Nest, \
+                test_max_Nest, color = 'brown', alpha = .5)
+ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
+ax.fill_between(np.arange(1, 101), test_min_Splx, \
+                test_max_Splx, color = 'green', alpha = .5)
+# ax.boxplot(test_BO, widths = 0.1, meanline = False, showfliers = False, manage_ticks = False)
+# ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
 
+ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
+         label = 'PyBobyqa', c = 'black')
+f_best = np.array(RB_Bayes_list[0]['f_best_so_far'])
+ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO', c = 'blue')
+ax.legend()
+ax.set_yscale('log')
+ax.set_xlim([0, 99])
 
 
 
