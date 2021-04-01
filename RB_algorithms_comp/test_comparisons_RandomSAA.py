@@ -20,8 +20,10 @@ from algorithms.CUATRO.CUATRO import CUATRO
 from algorithms.Finite_differences.Finite_differences import finite_Diff_Newton
 from algorithms.Finite_differences.Finite_differences import Adam_optimizer
 from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
+from algorithms.SQSnobfit_wrapped.Wrapper_for_SQSnobfit import SQSnobFitWrapper
+from algorithms.DIRECT_wrapped.Wrapper_for_Direct import DIRECTWrapper
 
-from test_functions import rosenbrock_constrained, quadratic_constrained
+from test_functions import rosenbrock_constrained
 
 import matplotlib.pyplot as plt
 
@@ -47,7 +49,7 @@ def trust_fig(oracle, bounds):
     ax.plot([bounds[0,0], bounds[0, 0]], [bounds[1,0], bounds[1, 1]], c = 'k')
     ax.plot([bounds[0,1], bounds[0, 1]], [bounds[1,0], bounds[1, 1]], c = 'k')
     
-    return ax
+    return ax, fig
 
 def average_from_list(solutions_list):
     N = len(solutions_list)
@@ -189,8 +191,29 @@ for i in range(N):
     RBSAA_CUATRO_local_list.append(RBSAA_CUATRO_local)
 print('10 CUATRO local iterations completed') 
 
+N = 10
+RBSAA_SQSnobFit_list = []
+for i in range(N):
+    RBSAA_SQSnobFit = SQSnobFitWrapper().solve(Problem_rosenbrock, x0, bounds, \
+                                   maxfun = max_f_eval, constraints=2)
+    RBSAA_SQSnobFit_list.append(RBSAA_SQSnobFit)
+print('10 SnobFit iterations completed') 
+
+N = 10
+boundsDIR = np.array([[-1.5,1],[-1,1.5]])
+RBSAA_DIRECT_list = []
+RB_DIRECT_f = lambda x, grad: Problem_rosenbrock(x)
+for i in range(N):
+    RBSAA_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_f, x0, boundsDIR, \
+                                   maxfun = max_f_eval, constraints=2)
+    RBSAA_DIRECT_list.append(RBSAA_DIRECT)
+print('10 DIRECT iterations completed')  
+
+with open('BayesRB_listRandSAA.pickle', 'rb') as handle:
+    RBSAA_Bayes_list = pickle.load(handle)
+
 # N = 10
-# RB_Bayes_list = []
+# RBSAA_Bayes_list = []
 # for i in range(N):
 #     Bayes = BayesOpt()
 #     pyro.set_rng_seed(i)
@@ -205,12 +228,13 @@ print('10 CUATRO local iterations completed')
 #     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
 #                             print_iteration = True, constraints=2, casadi=True, \
 #                             maxfun = nbr_feval, ).output_dict
-#     RB_Bayes_list.append(RB_Bayes)
+#     RBSAA_Bayes_list.append(RB_Bayes)
  
 # print('10 BayesOpt iterations completed')
 
-# with open('BayesRB_listRand.pickle', 'wb') as handle:
-#     pickle.dump(RB_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('BayesRB_listRandSAA10.pickle', 'wb') as handle:
+#     pickle.dump(RBSAA_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
 
@@ -222,122 +246,160 @@ oracle = RB(f_RB, ineq = [g1_RB, g2_RB])
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_pybbqa_list)):
     x_best = np.array(RBSAA_pybbqa_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_pybbqa_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_pybbqa_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'Py-BOBYQA'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'Py-BOBYQA'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Py-BOBYQA'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Py-BOBYQA'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_Pybbqa_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_Pybbqa_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_findiff_list)):
     x_best = np.array(RBSAA_findiff_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_findiff_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_findiff_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'Approx. Newton'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'Approx. Newton'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Approx. Newton'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Approx. Newton'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_Newton_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_Newton_2Dspace_plot.svg', format = "svg")
+
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_BFGS_list)):
     x_best = np.array(RBSAA_BFGS_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_BFGS_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_BFGS_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'BFGS'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'BFGS'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'BFGS'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'BFGS'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_BFGS_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_BFGS_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_BFGS_list)):
     x_best = np.array(RBSAA_Adam_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_Adam_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_Adam_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'Adam'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'Adam'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Adam'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Adam'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_Adam_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_Adam_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_CUATRO_global_list)):
     x_best = np.array(RBSAA_CUATRO_global_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_CUATRO_global_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_CUATRO_global_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
-    ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_CUATROg_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_CUATROg_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_CUATRO_local_list)):
     x_best = np.array(RBSAA_CUATRO_local_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_CUATRO_local_list[i]['f_best_so_far'])
     x_ind = np.array(RBSAA_CUATRO_local_list[i]['samples_at_iteration'])
-    # ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
-    ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
+    ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_CUATROl_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_CUATROl_2Dspace_plot.svg', format = "svg")
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(RBSAA_Bayes_list)):
+    x_best = np.array(RBSAA_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(RBSAA_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(RBSAA_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2 = trust_fig(oracle, bounds)
-# for i in range(len(RB_Bayes_list)):
-#     x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(RB_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_BO_2Dspace_plot.svg', format = "svg")
     
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_simplex_list)):
     x_best = np.array(RBSAA_simplex_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_simplex_list[i]['f_best_so_far'])
@@ -346,13 +408,21 @@ for i in range(len(RBSAA_simplex_list)):
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Simplex'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
 ax2.legend()
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_Simplex_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_Simplex_2Dspace_plot.svg', format = "svg")
 
 
 ## Change to x_best_So_far
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
+ax2, fig2 = trust_fig(oracle, bounds)
 for i in range(len(RBSAA_Nest_list)):
     x_best = np.array(RBSAA_Nest_list[i]['x_best_so_far'])
     f_best = np.array(RBSAA_Nest_list[i]['f_best_so_far'])
@@ -361,8 +431,58 @@ for i in range(len(RBSAA_Nest_list)):
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Nest.'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
 ax2.legend()
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_Nest_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_Nest_2Dspace_plot.svg', format = "svg")
 
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RBSAA_SQSnobFit_list[i]['x_best_so_far'])
+    f_best = np.array(RBSAA_SQSnobFit_list[i]['f_best_so_far'])
+    x_ind = np.array(RBSAA_SQSnobFit_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Snobfit'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Snobfit'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_SQSnobFit_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_SQSnobFit_2Dspace_plot.svg', format = "svg")
+
+## Change to x_best_So_far
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(N):
+    x_best = np.array(RBSAA_DIRECT_list[i]['x_best_so_far'])
+    f_best = np.array(RBSAA_DIRECT_list[i]['f_best_so_far'])
+    x_ind = np.array(RBSAA_DIRECT_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'DIRECT'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'DIRECT'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig1.savefig('RB_plots_RandomSAA/RBSAA10_DIRECT_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA10_DIRECT_2Dspace_plot.svg', format = "svg")
 
 
 sol_Cg = average_from_list(RBSAA_CUATRO_global_list)
@@ -381,31 +501,41 @@ sol_BFGS = average_from_list(RBSAA_BFGS_list)
 test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
 sol_Adam = average_from_list(RBSAA_Adam_list)
 test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
-
-
+sol_SQSF = average_from_list(RBSAA_SQSnobFit_list)
+test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
+sol_DIR = average_from_list(RBSAA_DIRECT_list)
+test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+# sol_BO = average_from_list(RBSAA_Bayes_list)
+# test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5)
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'r')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'r', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
-ax.fill_between(np.arange(1, 101), test_min_findiff, \
-                test_max_findiff, color = 'grey', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
-ax.fill_between(np.arange(1, 101), test_min_BFGS, \
-                test_max_BFGS, color = 'orange', alpha = .5)
-ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'green')
-ax.fill_between(np.arange(1, 101), test_min_Adam, \
-                test_max_Adam, color = 'green', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5)
+ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
+ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
+                test_max_pybbqa, color = 'green', alpha = .5)
+ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
+ax.fill_between(np.arange(1, 101), test_min_SQSF, \
+                test_max_SQSF, color = 'orange', alpha = .5)
+f_best = np.array(RBSAA_Bayes_list[0]['f_best_so_far'])
+ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO', c = 'r')
+f_best = np.array(RBSAA_Bayes_list[1]['f_best_so_far'])
+ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO', c = 'r')
+## BO placeholder: red
 
 ax.legend()
 ax.set_yscale('log')
 ax.set_xlim([0, 99])    
+fig.savefig('Publication plots format/SAA10PromisingMethods.svg', format = "svg")
     
+
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
@@ -414,33 +544,23 @@ ax.fill_between(np.arange(1, 101), test_min_Nest, \
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
                 test_max_Splx, color = 'green', alpha = .5)
-# ax.boxplot(test_BO, widths = 0.1, meanline = False, showfliers = False, manage_ticks = False)
-# ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+ax.fill_between(np.arange(1, 101), test_min_findiff, \
+                test_max_findiff, color = 'grey', alpha = .5)
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+ax.fill_between(np.arange(1, 101), test_min_BFGS, \
+                test_max_BFGS, color = 'orange', alpha = .5)
+ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
+ax.fill_between(np.arange(1, 101), test_min_Adam, \
+                test_max_Adam, color = 'blue', alpha = .5)
+ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
+ax.fill_between(np.arange(1, 101), test_min_DIR, \
+                test_max_DIR, color = 'violet', alpha = .5)
 
-ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'blue')
-ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'blue', alpha = .5)
-# f_best = np.array(RB_Bayes_list[0]['f_best_so_far'])
-# ax.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO', c = 'blue')
 
 ax.legend()
 ax.set_yscale('log')
 ax.set_xlim([0, 99])
-
-
-
-# with open('BayesRB_list.pickle', 'rb') as handle:
-#     RB_Bayes_list_ = pickle.load(handle)
-
-
-
-
-
-
-# with open('BayesRB_list.pickle', 'rb') as handle:
-#     RB_Bayes_list_ = pickle.load(handle)
-
-
+fig.savefig('Publication plots format/SAA10NotSoPromisingMethods.svg', format = "svg")
 
 

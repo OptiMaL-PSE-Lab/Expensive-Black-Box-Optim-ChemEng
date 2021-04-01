@@ -21,6 +21,8 @@ from algorithms.CUATRO.CUATRO import CUATRO
 from algorithms.Finite_differences.Finite_differences import finite_Diff_Newton
 from algorithms.Finite_differences.Finite_differences import Adam_optimizer
 from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
+from algorithms.SQSnobfit_wrapped.Wrapper_for_SQSnobfit import SQSnobFitWrapper
+from algorithms.DIRECT_wrapped.Wrapper_for_Direct import DIRECTWrapper
 
 from test_functions import rosenbrock_constrained, quadratic_constrained
 
@@ -71,69 +73,90 @@ for i in range(n_noise):
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([-0.5,1.5])
 
-max_f_eval = 100
-max_it = 50
+# max_f_eval = 100
+max_f_eval = 50
+max_it = 100
 
-N_SAA = 10
+N_SAA = 2
 
 
 N_samples = 20
 RBnoise_list_pybbqa = []
+RBconstraint_list_pybbqa = []
 for i in range(n_noise):
     print('Iteration ', i, ' of Py-BOBYQA')
     best = []
+    best_constr = []
     for j in range(N_samples):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
         sol = PyBobyqaWrapper().solve(f, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2, \
                                       seek_global_minimum = True)
         best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
     RBnoise_list_pybbqa.append(best)
+    RBconstraint_list_pybbqa.append(best_constr)
 
 # N_SAA = 1
 N_samples = 20
-RBnoise_list_splx = []
+RBnoise_list_SQSF = []
+RBconstraint_list_SQSF = []
 for i in range(n_noise):
-    print('Iteration ', i, ' of Simplex')
+    print('Iteration ', i, ' of SQSnobfit')
     best = []
+    best_constr = []
     for j in range(N_samples):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
-        sol = simplex_method(f, x0, bounds, max_iter = 50, \
-                            constraints = 2, rnd_seed = j)
+        sol = SQSnobFitWrapper().solve(f, x0, bounds, \
+                                   maxfun = max_f_eval, constraints=2)
         best.append(sol['f_best_so_far'][-1])
-    RBnoise_list_splx.append(best)
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoise_list_SQSF.append(best)
+    RBconstraint_list_SQSF.append(best_constr)
     
 # N_SAA = 1
 N_samples = 20
-RBnoise_list_CUATROl = []
+RBnoise_list_DIRECT = []
+RBconstraint_list_DIRECT = []
 init_radius = 0.1
+boundsDIR = np.array([[-1.5,1],[-1,1.5]])
 for i in range(n_noise):
-    print('Iteration ', i, ' of CUATRO_l')
+    print('Iteration ', i, ' of DIRECT')
     best = []
+    best_constr = []
     for j in range(N_samples):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
-        sol = CUATRO(f, x0, init_radius, bounds = bounds, \
-                          N_min_samples = 6, tolerance = 1e-10,\
-                          beta_red = 0.9, rnd = j, method = 'local', \
-                          constr_handling = 'Fitting')
+        DIRECT_f = lambda x, grad: f(x)
+        sol = DIRECTWrapper().solve(DIRECT_f, x0, boundsDIR, \
+                                   maxfun = max_f_eval, constraints=2)
         best.append(sol['f_best_so_far'][-1])
-    RBnoise_list_CUATROl.append(best)
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoise_list_DIRECT.append(best)
+    RBconstraint_list_DIRECT.append(best_constr)
     
 # N_SAA = 1
 N_samples = 20
 RBnoise_list_CUATROg = []
+RBconstraint_list_CUATROg = []
 init_radius = 2
 for i in range(n_noise):
     print('Iteration ', i, ' of CUATRO_g')
     best = []
+    best_constr = []
     for j in range(N_samples):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
-        sol = CUATRO(f, x0, init_radius, bounds = bounds, \
+        sol = CUATRO(f, x0, init_radius, bounds = bounds, max_f_eval = max_f_eval, \
                           N_min_samples = 15, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = j, method = 'global', \
                           constr_handling = 'Discrimination')
         best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
     RBnoise_list_CUATROg.append(best)
+    RBconstraint_list_CUATROg.append(best_constr)
     
 
 
@@ -142,80 +165,37 @@ noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
 
 
 convergence = list(itertools.chain(*RBnoise_list_pybbqa)) + \
-              list(itertools.chain(*RBnoise_list_splx)) + \
-              list(itertools.chain(*RBnoise_list_CUATROl)) + \
+              list(itertools.chain(*RBnoise_list_SQSF)) + \
+              list(itertools.chain(*RBnoise_list_DIRECT)) + \
               list(itertools.chain(*RBnoise_list_CUATROg))
+              
+constraints = list(itertools.chain(*RBconstraint_list_pybbqa)) + \
+              list(itertools.chain(*RBconstraint_list_SQSF)) + \
+              list(itertools.chain(*RBconstraint_list_DIRECT)) + \
+              list(itertools.chain(*RBconstraint_list_CUATROg))
               
 noise = list(itertools.chain(*noise_labels))*4
-method = ['Py-BOBYQA']*int(len(noise)/4) + ['Simplex']*int(len(noise)/4) + \
-         ['CUATRO_l']*int(len(noise)/4) + ['CUATRO_g']*int(len(noise)/4)
+method = ['Py-BOBYQA']*int(len(noise)/4) + ['SQSnobfit']*int(len(noise)/4) + \
+         ['DIRECT']*int(len(noise)/4) + ['CUATRO_g']*int(len(noise)/4)
 
-data = {'Convergence': convergence, 'Noise': noise, 'Method': method}
+data = {'Best function evaluation': convergence, \
+        "Constraint violation": constraints, \
+        "Noise standard deviation": noise, \
+        'Method': method}
 df = pd.DataFrame(data)
 
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-ax = sns.boxplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+plt.savefig('Publication plots format/SAA2feval50Convergence.svg', format = "svg")
 # ax.set_ylim([0.1, 10])
-ax.set_yscale("log")
-
-
-
-convergence = list(itertools.chain(*RBnoise_list_pybbqa)) + \
-              list(itertools.chain(*RBnoise_list_CUATROl)) + \
-              list(itertools.chain(*RBnoise_list_CUATROg))
-              
-noise = list(itertools.chain(*noise_labels))*3
-method = ['Py-BOBYQA']*int(len(noise)/3) +  \
-         ['CUATRO_l']*int(len(noise)/3) + ['CUATRO_g']*int(len(noise)/3)
-
-data = {'Convergence': convergence, 'Noise': noise, 'Method': method}
-df = pd.DataFrame(data)
-
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-ax = sns.boxplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax.set_ylim([0.1, 10])
-ax.set_yscale("log")
-
-
-convergence = list(itertools.chain(*RBnoise_list_CUATROl)) + \
-              list(itertools.chain(*RBnoise_list_CUATROg))
-              
-noise = list(itertools.chain(*noise_labels))*2
-method = ['CUATRO_l']*int(len(noise)/2) + ['CUATRO_g']*int(len(noise)/2)
-
-data = {'Convergence': convergence, 'Noise': noise, 'Method': method}
-df = pd.DataFrame(data)
-
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-ax = sns.boxplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax.set_ylim([0, 4])
 # ax.set_yscale("log")
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax.set_ylim([0.75, 1.25])
-# plt.boxplot(RBnoise_list_pybbqa.T)
+plt.clf()
 
-
-convergence = list(itertools.chain(*RBnoise_list_CUATROg))
-              
-noise = list(itertools.chain(*noise_labels))
-method = ['CUATRO_g']*int(len(noise))
-
-data = {'Convergence': convergence, 'Noise': noise, 'Method': method}
-df = pd.DataFrame(data)
-
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax = sns.boxplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax.set_ylim([0, 4])
-# ax.set_yscale("log")
-# ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-ax = sns.violinplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
-# ax.set_ylim([0.75, 1.25])
-# plt.boxplot(RBnoise_list_pybbqa.T)
-# sbs.violinplot(RBnoise_list_pybbqa.T)
-
-
-# ax = sns.boxplot(x = "Noise", y = "Convergence", hue = "Method", data = df, palette = "muted")
+ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", fliersize = 0)
+ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", dodge = True)
+plt.savefig('Publication plots format/SAA2feval50Constraints.svg', format = "svg")
 
 
 

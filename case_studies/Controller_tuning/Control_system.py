@@ -506,20 +506,20 @@ def reactor_phi_2st(pi, x0 = [.6, 310], xref = [.666, 308.489], N=200, T=3, \
 #                              beta_red = 0.9, max_f_eval = 100)
 #     reactor2_CQSO_list.append(temp)
 
-x1r = .666 ; x2r = 308.489 ; 
-pi = [.8746, .0257, -1.43388, -0.00131, 0.00016, 55.8692, 0.7159, .0188, .00017]
-pi_scaled = pi.copy()
-pi_scaled[0] /= x1r ; pi_scaled[1] /= x2r ; pi_scaled[2] /= x1r**2
-pi_scaled[3] /= (x1r*x2r) ; pi_scaled[4] /= x2r**2 ; pi_scaled[5] /= x1r**3
-pi_scaled[6] /= (x1r**2*x2r) ; pi_scaled[7] /= (x1r*x2r**2) ; 
-pi_scaled[8] /= x2r**3
-print(pi, pi_scaled)
-pi_scaled = pi.copy()
-pi_scaled[0] *= x1r ; pi_scaled[1] *= x2r ; pi_scaled[2] *= x1r**2
-pi_scaled[3] *= (x1r*x2r) ; pi_scaled[4] *= x2r**2 ; pi_scaled[5] *= x1r**3
-pi_scaled[6] *= (x1r**2*x2r) ; pi_scaled[7] *= (x1r*x2r**2) ; 
-pi_scaled[8] *= x2r**3
-print(pi_scaled)
+# x1r = .666 ; x2r = 308.489 ; 
+# pi = [.8746, .0257, -1.43388, -0.00131, 0.00016, 55.8692, 0.7159, .0188, .00017]
+# pi_scaled = pi.copy()
+# pi_scaled[0] /= x1r ; pi_scaled[1] /= x2r ; pi_scaled[2] /= x1r**2
+# pi_scaled[3] /= (x1r*x2r) ; pi_scaled[4] /= x2r**2 ; pi_scaled[5] /= x1r**3
+# pi_scaled[6] /= (x1r**2*x2r) ; pi_scaled[7] /= (x1r*x2r**2) ; 
+# pi_scaled[8] /= x2r**3
+# print(pi, pi_scaled)
+# pi_scaled = pi.copy()
+# pi_scaled[0] *= x1r ; pi_scaled[1] *= x2r ; pi_scaled[2] *= x1r**2
+# pi_scaled[3] *= (x1r*x2r) ; pi_scaled[4] *= x2r**2 ; pi_scaled[5] *= x1r**3
+# pi_scaled[6] *= (x1r**2*x2r) ; pi_scaled[7] *= (x1r*x2r**2) ; 
+# pi_scaled[8] *= x2r**3
+# print(pi_scaled)
 
 # T = 50
 # pi = [.8746, .0257, -1.43388, -0.00131, 0.00016, 55.8692, 0.7159, .0188, .00017]

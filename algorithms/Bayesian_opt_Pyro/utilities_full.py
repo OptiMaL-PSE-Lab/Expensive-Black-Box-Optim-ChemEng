@@ -636,6 +636,7 @@ class BayesOpt(object):
         output_dict['g_best_so_far'] = y_his_optimal[:,1:]
         output_dict['f_best_so_far'] = y_his_optimal[:,0]
         output_dict['x_best_so_far'] = x_his_optimal
+        output_dict['samples_at_iteration'] = np.arange(1, 1+len( output_dict['f_store']))
         output_dict['TR']            = [None]*self.maxfun
 
 

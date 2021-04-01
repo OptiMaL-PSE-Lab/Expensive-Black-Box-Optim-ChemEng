@@ -20,6 +20,8 @@ from algorithms.CUATRO.CUATRO import CUATRO
 from algorithms.Finite_differences.Finite_differences import finite_Diff_Newton
 from algorithms.Finite_differences.Finite_differences import Adam_optimizer
 from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
+from algorithms.SQSnobfit_wrapped.Wrapper_for_SQSnobfit import SQSnobFitWrapper
+from algorithms.DIRECT_wrapped.Wrapper_for_Direct import DIRECTWrapper
 
 from test_functions import quadratic_constrained
 
@@ -45,8 +47,26 @@ def trust_fig(oracle, bounds):
     ax.plot([bounds[0,0], bounds[0, 0]], [bounds[1,0], bounds[1, 1]], c = 'k')
     ax.plot([bounds[0,1], bounds[0, 1]], [bounds[1,0], bounds[1, 1]], c = 'k')
     
-    return ax
+    return ax, fig
 
+def average_from_list(solutions_list):
+    N = len(solutions_list)
+    f_best_all = np.zeros((N, 100))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+    f_median = np.median(f_best_all, axis = 0)
+    # f_av = np.average(f_best_all, axis = 0)
+    # f_std = np.std(f_best_all, axis = 0)
+    f_min = np.min(f_best_all, axis = 0)
+    f_max = np.max(f_best_all, axis = 0)
+    return f_best_all, f_median, f_min, f_max
 
 class RB:
     def __init__(self, objective, ineq = []):
@@ -68,7 +88,7 @@ class RB:
 
 
 def Problem_quadratic(x):
-    N_SAA = 5
+    N_SAA = 2
     f_SAA = 0
     g_SAA = - np.inf
     for i in range(N_SAA):
@@ -90,247 +110,456 @@ max_f_eval = 100
 max_it = 50
 
 
-quadratic_pybobyqa2 = PyBobyqaWrapper().solve(Problem_quadratic, x0, bounds=bounds.T, \
-                                      maxfun= max_f_eval, constraints=1)
-
 N = 10
-quadratic_Nest_list2 = []
+quadraticSAA_pybbqa_list = []
+for i in range(N):
+    quadraticSAA_pybobyqa = PyBobyqaWrapper().solve(Problem_quadratic, x0, bounds=bounds.T, \
+                                              maxfun= max_f_eval, constraints=2, \
+                                              seek_global_minimum = True)
+    quadraticSAA_pybbqa_list.append(quadraticSAA_pybobyqa)   
+print('10 Py-BOBYQA iterations completed')
+# print(x0)
+    
+N = 10
+quadraticSAA_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_Nest = nesterov_random(Problem_quadratic, x0, bounds, max_iter = 50, \
+    quadraticSAA_Nest = nesterov_random(Problem_quadratic, x0, bounds, max_iter = 50, \
                           constraints = 1, rnd_seed = i, alpha = 1e-3, mu = 1e-2)
-    quadratic_Nest_list2.append(quadratic_Nest)
+    quadraticSAA_Nest_list.append(quadraticSAA_Nest)
 print('10 Nesterov iterations completed')
+# print(x0)
 
 N = 10
-quadratic_simplex_list2 = []
+quadraticSAA_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_simplex = simplex_method(Problem_quadratic, x0, bounds, max_iter = 50, \
+    quadraticSAA_simplex = simplex_method(Problem_quadratic, x0, bounds, max_iter = 50, \
                             constraints = 1, rnd_seed = i)
-    quadratic_simplex_list2.append(quadratic_simplex)
+    quadraticSAA_simplex_list.append(quadraticSAA_simplex)
 print('10 simplex iterations completed')
 
-quadratic_FiniteDiff2 = finite_Diff_Newton(Problem_quadratic, x0, bounds = bounds, \
+
+N = 10
+quadraticSAA_findiff_list = []
+for i in range(N):
+    quadraticSAA_FiniteDiff = finite_Diff_Newton(Problem_quadratic, x0, bounds = bounds, \
                                    con_weight = 100)
+    quadraticSAA_findiff_list.append(quadraticSAA_FiniteDiff)
+print('10 Approx Newton iterations completed')
     
-quadratic_BFGS2 = BFGS_optimizer(Problem_quadratic, x0, bounds = bounds, \
+N = 10
+quadraticSAA_BFGS_list = []
+for i in range(N):
+    quadraticSAA_BFGS = BFGS_optimizer(Problem_quadratic, x0, bounds = bounds, \
                          con_weight = 100)
+    quadraticSAA_BFGS_list.append(quadraticSAA_BFGS)
+print('10 BFGS iterations completed')
     
-quadratic_Adam2 = Adam_optimizer(Problem_quadratic, x0, method = 'forward', \
+N = 10
+quadraticSAA_Adam_list = []
+for i in range(N):
+    quadraticSAA_Adam = Adam_optimizer(Problem_quadratic, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
                                       max_f_eval = 100, con_weight = 100)
+    quadraticSAA_Adam_list.append(quadraticSAA_Adam)
+print('10 Adam iterations completed')
     
 N_min_s = 15
 init_radius = 2
 method = 'Discrimination'
 N = 10
-quadratic_CUATRO_global_list2 = []
+quadraticSAA_CUATRO_global_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_CUATRO_global = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
+    quadraticSAA_CUATRO_global = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.9, rnd = rnd_seed, method = 'global', \
+                          beta_red = 0.9, rnd = rnd_seed+1, method = 'global', \
                           constr_handling = method)
-    quadratic_CUATRO_global_list2.append(quadratic_CUATRO_global)
+    quadraticSAA_CUATRO_global_list.append(quadraticSAA_CUATRO_global)
 print('10 CUATRO global iterations completed')    
-    
-# N_min_s = 6
-# init_radius = 0.1
-# method = 'Fitting'
-# N = 10
-# quadratic_CUATRO_local_list = []
-# for i in range(N):
-#     rnd_seed = i
-#     quadratic_CUATRO_local = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
-#                           N_min_samples = N_min_s, tolerance = 1e-10,\
-#                           beta_red = 0.9, rnd = rnd_seed, method = 'local', \
-#                           constr_handling = method)
-#     quadratic_CUATRO_local_list.append(quadratic_CUATRO_local)
-# print('10 CUATRO local iterations completed') 
 
 N_min_s = 6
 init_radius = 1
 method = 'Fitting'
 N = 10
-quadratic_CUATRO_local_list12 = []
+quadraticSAA_CUATRO_local_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_CUATRO_local1 = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
+    quadraticSAA_CUATRO_local = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.5, rnd = rnd_seed, method = 'local', \
+                          beta_red = 0.5, rnd = 1+rnd_seed, method = 'local', \
                           constr_handling = method)
-    quadratic_CUATRO_local_list12.append(quadratic_CUATRO_local1)
+    quadraticSAA_CUATRO_local_list.append(quadraticSAA_CUATRO_local)
 print('10 CUATRO local iterations completed') 
 
 N = 10
-quadratic_Bayes_list2 = []
-for i in range(1):
-    Bayes = BayesOpt()
-    pyro.set_rng_seed(i)
+quadraticSAA_SQSnobFit_list = []
+for i in range(N):
+    quadraticSAA_SQSnobFit = SQSnobFitWrapper().solve(Problem_quadratic, x0, bounds, \
+                                   maxfun = max_f_eval, constraints=2)
+    quadraticSAA_SQSnobFit_list.append(quadraticSAA_SQSnobFit)
+print('10 SnobFit iterations completed') 
+
+N = 10
+quadraticSAA_DIRECT_list = []
+quadratic_DIRECT_f = lambda x, grad: Problem_quadratic(x)
+for i in range(N):
+    quadraticSAA_DIRECT =  DIRECTWrapper().solve(quadratic_DIRECT_f, x0, bounds, \
+                                   maxfun = max_f_eval, constraints=2)
+    quadraticSAA_DIRECT_list.append(quadraticSAA_DIRECT)
+print('10 DIRECT iterations completed')     
+
+# with open('BayesQuadratic_list.pickle', 'rb') as handle:
+#     quadratic_Bayes_list = pickle.load(handle)
+
+# N = 10
+# quadratic_Bayes_list = []
+# for i in range(1):
+#     Bayes = BayesOpt()
+#     pyro.set_rng_seed(i)
     
-    if i<3:
-        nbr_feval = 40
-    elif i<6:
-        nbr_feval = 30
-    else:
-        nbr_feval = 20
+#     if i<3:
+#         nbr_feval = 40
+#     elif i<6:
+#         nbr_feval = 30
+#     else:
+#         nbr_feval = 20
     
-    quadratic_Bayes = Bayes.solve(Problem_quadratic, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints= 1, casadi=True, \
-                            maxfun = nbr_feval, ).output_dict
-    quadratic_Bayes_list2.append(quadratic_Bayes)
+#     quadratic_Bayes = Bayes.solve(Problem_quadratic, x0, acquisition='EI',bounds=bounds.T, \
+#                             print_iteration = True, constraints= 1, casadi=True, \
+#                             maxfun = nbr_feval, ).output_dict
+#     quadratic_Bayes_list.append(quadratic_Bayes)
  
-print('10 BayesOpt iterations completed')
+# print('10 BayesOpt iterations completed')
 
-with open('BayesQuadraticTight_list.pickle', 'wb') as handle:
-    pickle.dump(quadratic_Bayes_list2, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-
-x_best_pyBbyqa = np.array(quadratic_pybobyqa2['x_best_so_far'])
-f_best_pyBbyqa = np.array(quadratic_pybobyqa2['f_best_so_far'])
-
-x_best_finDiff = np.array(quadratic_FiniteDiff2['x_best_so_far'])
-f_best_finDiff = np.array(quadratic_FiniteDiff2['f_best_so_far'])
-x_ind_findDiff = np.array(quadratic_FiniteDiff2['samples_at_iteration'])
-
-x_best_BFGS = np.array(quadratic_BFGS2['x_best_so_far'])
-f_best_BFGS = np.array(quadratic_BFGS2['f_best_so_far'])
-x_ind_BFGS = np.array(quadratic_BFGS2['samples_at_iteration'])
-
-x_best_Adam = np.array(quadratic_Adam2['x_best_so_far'])
-f_best_Adam = np.array(quadratic_Adam2['f_best_so_far'])
-x_ind_Adam = np.array(quadratic_Adam2['samples_at_iteration'])
+# with open('BayesQuadratic_list.pickle', 'wb') as handle:
+#     pickle.dump(quadratic_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-fig1 = plt.figure()
-ax1 = fig1.add_subplot()
-ax1.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
-         label = 'PyBobyqa')
-ax1.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
-         label = 'Newton Fin. Diff.')
-ax1.step(x_ind_BFGS, f_best_BFGS, where = 'post', \
-         label = 'BFGS')
-ax1.step(x_ind_Adam, f_best_Adam, where = 'post', \
-         label = 'Adam')
-ax1.legend()
-ax1.set_yscale('log')
 
 quadratic_f = lambda x, y: x**2 + 10*y**2 + x*y
 quadratic_g = lambda x, y: 1 - x - y <= 0
 
 oracle = RB(quadratic_f, ineq = [quadratic_g])
 
-ax2 = trust_fig(oracle, bounds)
-ax2.plot(x_best_pyBbyqa[:,0], x_best_pyBbyqa[:,1], '--x', \
-         label = 'PyBobyqa')
-ax2.plot(x_best_finDiff[:,0], x_best_finDiff[:,1], '--x', \
-         label = 'Newton Fin. Diff.')
-ax2.plot(x_best_BFGS[:,0], x_best_BFGS[:,1], '--x', \
-         label = 'BFGS')
-ax2.plot(x_best_Adam[:,0], x_best_Adam[:,1], '--x', \
-         label = 'Adam')
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_pybbqa_list)):
+    x_best = np.array(quadraticSAA_pybbqa_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_pybbqa_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_pybbqa_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Py-BOBYQA'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Py-BOBYQA'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Py-BOBYQA'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Pybbqa_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Pybbqa_2Dspace_plot.svg', format = "svg")
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_findiff_list)):
+    x_best = np.array(quadraticSAA_findiff_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_findiff_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_findiff_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Approx. Newton'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Approx. Newton'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Approx. Newton'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Newton_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Newton_2Dspace_plot.svg', format = "svg")
 
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(len(quadratic_CUATRO_global_list2)):
-    x_best = np.array(quadratic_CUATRO_global_list2[i]['x_best_so_far'])
-    f_best = np.array(quadratic_CUATRO_global_list2[i]['f_best_so_far'])
-    x_ind = np.array(quadratic_CUATRO_global_list2[i]['samples_at_iteration'])
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_BFGS_list)):
+    x_best = np.array(quadraticSAA_BFGS_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_BFGS_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_BFGS_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'BFGS'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'BFGS'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'BFGS'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_BFGS_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_BFGS_2Dspace_plot.svg', format = "svg")
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_Adam_list)):
+    x_best = np.array(quadraticSAA_Adam_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_Adam_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_Adam_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Adam'+str(i))
+    # ax1.plot(x_ind, f_best, label = 'Adam'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Adam'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Adam_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Adam_2Dspace_plot.svg', format = "svg")
+
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_CUATRO_global_list)):
+    x_best = np.array(quadraticSAA_CUATRO_global_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_CUATRO_global_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_CUATRO_global_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-
-
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2 = trust_fig(oracle, bounds)
-# for i in range(len(quadratic_CUATRO_local_list)):
-#     x_best = np.array(quadratic_CUATRO_local_list[i]['x_best_so_far'])
-#     f_best = np.array(quadratic_CUATRO_local_list[i]['f_best_so_far'])
-#     x_ind = np.array(quadratic_CUATRO_local_list[i]['samples_at_iteration'])
-#     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
-#     # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_CUATROg_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_CUATROg_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(len(quadratic_CUATRO_local_list12)):
-    x_best = np.array(quadratic_CUATRO_local_list12[i]['x_best_so_far'])
-    f_best = np.array(quadratic_CUATRO_local_list12[i]['f_best_so_far'])
-    x_ind = np.array(quadratic_CUATRO_local_list12[i]['samples_at_iteration'])
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_CUATRO_local_list)):
+    x_best = np.array(quadraticSAA_CUATRO_local_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_CUATRO_local_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_CUATRO_local_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'CUATRO_l'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_CUATROl_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_CUATROl_2Dspace_plot.svg', format = "svg")
+
+# fig1 = plt.figure()
+# ax1 = fig1.add_subplot()
+# ax2, fig2 = trust_fig(oracle, bounds)
+# for i in range(len(quadraticSAA_Bayes_list)):
+#     x_best = np.array(quadraticSAA_Bayes_list[i]['x_best_so_far'])
+#     f_best = np.array(quadraticSAA_Bayes_list[i]['f_best_so_far'])
+#     nbr_feval = len(quadraticSAA_Bayes_list[i]['f_store'])
+#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
+#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+# ax1.legend()
+# ax1.set_yscale('log')
+# ax1.set_xlabel('Nbr. of function evaluations')
+# ax1.set_ylabel('Best function evaluation')
+# ax2.set_xlabel('$x_1$')
+# ax2.set_ylabel('$x_2$')
+# ax2.legend()
+# ax2.set_xlim(bounds[0])
+# ax2.set_ylim(bounds[1])
+# fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_BO_Convergence_plot.svg', format = "svg")
+# fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_BO_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(len(quadratic_Bayes_list2)):
-    x_best = np.array(quadratic_Bayes_list2[i]['x_best_so_far'])
-    f_best = np.array(quadratic_Bayes_list2[i]['f_best_so_far'])
-    nbr_feval = len(quadratic_Bayes_list2[i]['f_store'])
-    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-    ax2.plot(x_best[:,0], x_best[:,1], '--', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-ax1.legend()
-ax1.set_yscale('log')
-ax2.legend()
-ax2.set_xlim(bounds[0])
-ax2.set_ylim(bounds[1])
-    
-
-fig1 = plt.figure()
-ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(len(quadratic_simplex_list2)):
-    x_best = np.array(quadratic_simplex_list2[i]['x_best_so_far'])
-    f_best = np.array(quadratic_simplex_list2[i]['f_best_so_far'])
-    x_ind = np.array(quadratic_simplex_list2[i]['samples_at_iteration'])
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_simplex_list)):
+    x_best = np.array(quadraticSAA_simplex_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_simplex_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_simplex_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Simplex'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Simplex'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
 ax2.legend()
-
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_simplex_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_simplex_2Dspace_plot.svg', format = "svg")
 
 ## Change to x_best_So_far
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-ax2 = trust_fig(oracle, bounds)
-for i in range(N):
-    x_best = np.array(quadratic_Nest_list2[i]['x_best_so_far'])
-    f_best = np.array(quadratic_Nest_list2[i]['f_best_so_far'])
-    x_ind = np.array(quadratic_Nest_list2[i]['samples_at_iteration'])
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_Nest_list)):
+    x_best = np.array(quadraticSAA_Nest_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_Nest_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_Nest_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Nest.'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Nest.'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
 ax2.legend()
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Nesterov_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_Nesterov_2Dspace_plot.svg', format = "svg")
+
+## Change to x_best_So_far
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_SQSnobFit_list)):
+    x_best = np.array(quadraticSAA_SQSnobFit_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_SQSnobFit_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_SQSnobFit_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'Snobfit'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'Snobfit'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_SQSnobFit_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_SQSnobFit_2Dspace_plot.svg', format = "svg")
+
+## Change to x_best_So_far
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadraticSAA_DIRECT_list)):
+    x_best = np.array(quadraticSAA_DIRECT_list[i]['x_best_so_far'])
+    f_best = np.array(quadraticSAA_DIRECT_list[i]['f_best_so_far'])
+    x_ind = np.array(quadraticSAA_DIRECT_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'DIRECT'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'DIRECT'+str(i))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig1.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_DIRECT_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots_RandomSAA/QuadraticSAA_DIRECT_2Dspace_plot.svg', format = "svg")
+
+
+sol_Cg = average_from_list(quadraticSAA_CUATRO_global_list)
+test_CUATROg, test_av_CUATROg, test_min_CUATROg, test_max_CUATROg = sol_Cg
+sol_Cl = average_from_list(quadraticSAA_CUATRO_local_list)
+test_CUATROl, test_av_CUATROl, test_min_CUATROl, test_max_CUATROl = sol_Cl
+sol_Nest = average_from_list(quadraticSAA_Nest_list)
+test_Nest, test_av_Nest, test_min_Nest, test_max_Nest = sol_Nest
+sol_Splx = average_from_list(quadraticSAA_simplex_list)
+test_Splx, test_av_Splx, test_min_Splx, test_max_Splx = sol_Splx
+sol_pybbyqa = average_from_list(quadraticSAA_pybbqa_list)
+test_pybbqa, test_av_pybbqa, test_min_pybbqa, test_max_pybbqa = sol_pybbyqa
+sol_findiff = average_from_list(quadraticSAA_findiff_list)
+test_findiff, test_av_findiff, test_min_findiff, test_max_findiff = sol_findiff
+sol_BFGS = average_from_list(quadraticSAA_BFGS_list)
+test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
+sol_Adam = average_from_list(quadraticSAA_Adam_list)
+test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
+sol_SQSF = average_from_list(quadraticSAA_SQSnobFit_list)
+test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
+sol_DIR = average_from_list(quadraticSAA_DIRECT_list)
+test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+
+
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
+                test_max_CUATROg, color = 'b', alpha = .5)
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
+                test_max_CUATROl, color = 'c', alpha = .5)
+ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
+ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
+                test_max_pybbqa, color = 'green', alpha = .5)
+ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
+ax.fill_between(np.arange(1, 101), test_min_SQSF, \
+                test_max_SQSF, color = 'orange', alpha = .5)
+## BO placeholder: red
+
+ax.legend()
+ax.set_yscale('log')
+ax.set_xlim([0, 99])    
+fig.savefig('Quadratic_publication_plots/PromisingMethodsSAA.svg', format = "svg")
+
+
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
+ax.fill_between(np.arange(1, 101), test_min_Nest, \
+                test_max_Nest, color = 'brown', alpha = .5)
+ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
+ax.fill_between(np.arange(1, 101), test_min_Splx, \
+                test_max_Splx, color = 'green', alpha = .5)
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+ax.fill_between(np.arange(1, 101), test_min_findiff, \
+                test_max_findiff, color = 'grey', alpha = .5)
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+ax.fill_between(np.arange(1, 101), test_min_BFGS, \
+                test_max_BFGS, color = 'orange', alpha = .5)
+ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
+ax.fill_between(np.arange(1, 101), test_min_Adam, \
+                test_max_Adam, color = 'blue', alpha = .5)
+ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
+ax.fill_between(np.arange(1, 101), test_min_DIR, \
+                test_max_DIR, color = 'violet', alpha = .5)
+
+
+ax.legend()
+ax.set_yscale('log')
+ax.set_xlim([0, 99])
+fig.savefig('Quadratic_publication_plots/NotSoPromisingMethodsSAA.svg', format = "svg")
+
 
 
 
