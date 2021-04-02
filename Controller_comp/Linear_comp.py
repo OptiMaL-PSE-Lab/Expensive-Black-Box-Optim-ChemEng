@@ -77,6 +77,15 @@ ContrLin_pybobyqa = PyBobyqaWrapper().solve(phi, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=1, \
                                       seek_global_minimum = True)
 
+ContrLin_Nest_list = []
+phi_uncon = lambda x: phi(x)[0]
+ContrLin_Bayes = BayesOpt().solve(phi_uncon, x0, acquisition='EI',bounds=bounds.T, \
+                            print_iteration = True, casadi=True, \
+                            maxfun = max_f_eval, ).output_dict
+
+
+
+
 N = 10
 ContrLin_Nest_list = []
 for i in range(N):
