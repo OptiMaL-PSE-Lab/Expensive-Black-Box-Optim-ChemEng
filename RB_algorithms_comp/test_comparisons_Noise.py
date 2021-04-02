@@ -33,6 +33,26 @@ import itertools
 import pandas as pd
 import pickle
 
+
+class RB:
+    def __init__(self, objective, ineq = []):
+        self.obj = objective ; self.ieq = ineq
+    def sample_obj(self, x, y):
+        return self.obj(x, y)
+    def sample_constr(self, x, y):
+        if self.ieq == []:
+            if (type(x) == float) or (type(x) == int):
+                return 1
+            else:
+                return np.ones(len(x))
+        elif (type(x) == float) or (type(x) == int):
+            temporary = [int(g(x, y)) for g in self.ieq]
+            return np.product(np.array(temporary))
+        else:
+            temporary = [g(x, y).astype(int) for g in self.ieq]
+            return np.product(np.array(temporary), axis = 0)
+
+
 def average_from_list(solutions_list):
     N = len(solutions_list)
     f_best_all = np.zeros((N, 100))
@@ -51,6 +71,47 @@ def average_from_list(solutions_list):
     f_min = np.min(f_best_all, axis = 0)
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
+
+def median_from_list(solutions_list):
+    N = len(solutions_list)
+    f_best_all = np.zeros((N, 100))
+    x_best_all = np.zeros((N, 100, len(solutions_list[0]['x_best_so_far'][0])))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_best = np.array(solutions_list[i]['x_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+                x_best_all[i, j, :] = x_best[0]
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+                x_best_all[i, j, :] = x_best[ind][-1]
+    x_median = np.median(x_best_all, axis = 0)
+    return x_median
+
+def trust_fig(oracle, bounds):
+    N = 200
+    lim = 2
+    x = np.linspace(-lim, lim, N)
+    y = np.linspace(-lim, lim, N)
+    X,Y = np.meshgrid(x, y)
+    Z = oracle.sample_obj(X,Y)
+    constr = oracle.sample_constr(X,Y)
+
+    level_list = np.logspace(-0.5, 4, 10)
+
+    fig = plt.figure(figsize = (6,4))
+    ax = fig.add_subplot()
+    
+    ax.contour(X,Y,Z*constr, levels = level_list)
+    ax.plot([bounds[0,0], bounds[0, 1]], [bounds[1,0], bounds[1, 0]], c = 'k')
+    ax.plot([bounds[0,0], bounds[0, 1]], [bounds[1,1], bounds[1, 1]], c = 'k')
+    ax.plot([bounds[0,0], bounds[0, 0]], [bounds[1,0], bounds[1, 1]], c = 'k')
+    ax.plot([bounds[0,1], bounds[0, 1]], [bounds[1,0], bounds[1, 1]], c = 'k')
+    
+    return ax, fig
 
 def Problem_rosenbrock(x, noise_std, N_SAA):
     f_SAA = 0
@@ -109,7 +170,7 @@ for i in range(n_noise):
     for j in range(N_samples):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
         sol = SQSnobFitWrapper().solve(f, x0, bounds, \
-                                   maxfun = max_f_eval, constraints=2)
+                                    maxfun = max_f_eval, constraints=2)
         best.append(sol['f_best_so_far'][-1])
         _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
         best_constr.append(np.sum(np.maximum(g, 0)))
@@ -130,7 +191,7 @@ for i in range(n_noise):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
         DIRECT_f = lambda x, grad: f(x)
         sol = DIRECTWrapper().solve(DIRECT_f, x0, boundsDIR, \
-                                   maxfun = max_f_eval, constraints=2)
+                                    maxfun = max_f_eval, constraints=2)
         best.append(sol['f_best_so_far'][-1])
         _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
         best_constr.append(np.sum(np.maximum(g, 0)))
@@ -176,7 +237,7 @@ constraints = list(itertools.chain(*RBconstraint_list_pybbqa)) + \
               
 noise = list(itertools.chain(*noise_labels))*4
 method = ['Py-BOBYQA']*int(len(noise)/4) + ['SQSnobfit']*int(len(noise)/4) + \
-         ['DIRECT']*int(len(noise)/4) + ['CUATRO_g']*int(len(noise)/4)
+          ['DIRECT']*int(len(noise)/4) + ['CUATRO_g']*int(len(noise)/4)
 
 data = {'Best function evaluation': convergence, \
         "Constraint violation": constraints, \
@@ -196,6 +257,34 @@ ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
 ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", dodge = True)
 plt.savefig('Publication plots format/SAA2feval50Constraints.svg', format = "svg")
+
+
+### Plots
+
+# f_RB = lambda x, y: (1 - x)**2 + 100*(y - x**2)**2
+# g1_RB = lambda x, y: (x-1)**3 - y + 1 <= 0
+# g2_RB = lambda x, y: x + y - 1.8 <= 0
+
+# oracle = RB(f_RB, ineq = [g1_RB, g2_RB])
+
+# x_med_SQSF = median_from_list(RBRand_SQSnobFit_list)
+# x_med_DIRECT = median_from_list(RBRand_DIRECT_list)
+# x_med_CUATROg = median_from_list(RBRand_CUATRO_global_list)
+
+# ax, fig = trust_fig(oracle, bounds)
+
+# ax.plot(x_med_SQSF[:,0], x_med_SQSF[:,1], '--o', \
+#           label = 'SQSnobfit')
+# ax.plot(x_med_DIRECT[:,0], x_med_DIRECT[:,1], '--o', \
+#           label = 'DIRECT')
+# ax.plot(x_med_CUATROg[:,0], x_med_CUATROg[:,1], '--o', \
+#           label = 'CUATRO_g')
+# ax.set_xlabel('$x_1$')
+# ax.set_ylabel('$x_2$')
+# ax.legend()
+# ax.set_xlim(bounds[0])
+# ax.set_ylim(bounds[1])
+# fig.savefig('Publication Plots format/2DSolutionSpaceConvergence.svg', format = "svg")
 
 
 

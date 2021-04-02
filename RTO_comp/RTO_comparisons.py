@@ -177,9 +177,9 @@ with open('BayesRTO_list.pickle', 'rb') as handle:
 #     else:
 #         nbr_feval = 20
     
-#     RTO_Bayes = Bayes.solve(RTO, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
+    # RTO_Bayes = Bayes.solve(RTO, x0, acquisition='EI',bounds=bounds.T, \
+    #                         print_iteration = True, constraints=2, casadi=True, \
+    #                         maxfun = nbr_feval, ).output_dict
 #     RTO_Bayes_list.append(RTO_Bayes)
  
 # print('10 BayesOpt iterations completed')
