@@ -1,5 +1,5 @@
 import case_studies.MBDoE.utilities_leeds_pre as utilities
-import case_studies.MBDoE.utilities_leeds as utilities1
+import case_studies.MBDoE.Utilities_leeds as utilities1
 
 import case_studies.MBDoE.ut as ut
 import numpy as np
@@ -196,20 +196,21 @@ u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
 # # thetas = np.array([-1.99016019e+00,  4.02029750e-07,  1.13025371e+00,  1.95547106e+01,
 # #        -9.07495402e+00,  3.34202879e-02, -7.39214576e+00,  3.99978552e+01])
 import pickle
-vv1, _, nx, _, nu, thetas, sigma,V, c1o, c2o = pickle.load( open('case_studies/MBDoE/FIM.p', 'rb'))
-
-s = utilities1.objective( f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o,'A', u_t.reshape(1, nu[0]))
-
+# vv1, _, nx, _, nu, thetas, sigma,V, c1o, c2o = pickle.load( open('FIM.p', 'rb'))
+#
+# s = utilities1.objective( f, vv1, 4, nx, 1, nu, thetas, sigma,V, c1o, c2o,'A', u_t.reshape(1, nu[0]))
+#
 import functools
-funs = functools.partial(utilities.objective, f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o)
+# funs = functools.partial(utilities.objective, f, vv1, 4, nx, 1, nu, thetas, sigma,V, c1o, c2o)
 
-def construct_obj_MBDoE(select_design):
-    vv1, _, nx, _, nu, thetas, sigma, V, c1o, c2o = pickle.load(open('FIM2.p', 'rb'))
+def construct_obj_MBDoE(select_design, N_exp, params, show):
     # thetas = np.array([-1.99016019e+00, 4.02029750e-07, 1.13025371e+00, 1.95547106e+01,
     #                    -9.07495402e+00, 3.34202879e-02, -7.39214576e+00, 3.99978552e+01])
     #
-    funs = functools.partial(utilities1.objective, f, vv1, 1, nx, 1, nu,
-                             true_theta, sigma,V, c1o, c2o, select_design)
+    vv1, nx, nu, thetas, sigma, V, c1o, c2o = params
+
+    funs = functools.partial(utilities1.objective, f, vv1, N_exp, nx, 1, nu,
+                             thetas, sigma,V, c1o, c2o, select_design, show)
     return funs
 
 def construct_obj_MBDoE_moo(select_design, param):
@@ -231,14 +232,43 @@ def obj_norm(funs, u):
     u_apply = u_t.reshape(1, nu[0])
     return funs(u_apply)
 
-def obj_MBDoE(select_design='A'):
-    funs = construct_obj_MBDoE(select_design)
-    return functools.partial(obj_norm, funs)
+def obj_norm_multiple(funs, N_exp,u):
+    lbu = [60, 0.3, 0.3, 0.3]*N_exp  # [60, 0.3, 0.3, 0.3]#, 0.1]
+    ubu = [130, 3, 3, 3]*N_exp  # [130, 3, 3, 3]#, 2.0]
+
+    bounds = (lbu, ubu)
+    u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
+
+    u_apply = u_t.reshape(N_exp, nu[0])
+    return funs(u_apply)
 
 
-def MBDoE(x):
-    obj_MBDoE(select_design='E')
-    return obj_MBDoE(x), [0.]
+
+
+
+def obj_MBDoE(select_design='A', N_exp=1, params = None,show=False):
+    if params ==None:
+        vv1, _, nx, _, nu, thetas, sigma, V, c1o, c2o = pickle.load(open('FIM2.p', 'rb'))
+        #vv1 = vv1*0
+        params = vv1, nx, nu, thetas[:ntheta[0]], sigma, V, c1o, c2o
+    funs = construct_obj_MBDoE(select_design, N_exp, params, show)
+    return functools.partial(obj_norm_multiple, funs, N_exp)
+
+
+def set_funcs_mbdoe(x):
+    return obj_MBDoE('cov_E', 1)(x), [0]
+
+
+def obj_space_filling(us):
+    funs = utilities1.diistance_from_space_filling
+    return functools.partial(funs, us)
+
+
+def exploration():
+    funs = utilities1.explore
+    return functools.partial(funs)
+
+
 
 def obj_MBDoE_moo(select_design='A', param=0.1):
     funs = construct_obj_MBDoE_moo(select_design, param)
