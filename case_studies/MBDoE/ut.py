@@ -1,7 +1,7 @@
 from casadi import *
 import numpy as np
 from pyDOE import *
-from MBDoE.utilities_leeds import *
+from case_studies.MBDoE.utilities_leeds import *
 from scipy.stats import norm
 import scipy
 

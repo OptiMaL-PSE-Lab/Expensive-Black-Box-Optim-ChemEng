@@ -1,7 +1,7 @@
-import MBDoE.utilities_leeds_pre as utilities
-import MBDoE.utilities_leeds as utilities1
+import case_studies.MBDoE.utilities_leeds_pre as utilities
+import case_studies.MBDoE.utilities_leeds as utilities1
 
-import MBDoE.ut as ut
+import case_studies.MBDoE.ut as ut
 import numpy as np
 import casadi as ca
 
@@ -196,7 +196,7 @@ u_t = (u)*(np.array(ubu)-np.array(lbu))+np.array(lbu)
 # # thetas = np.array([-1.99016019e+00,  4.02029750e-07,  1.13025371e+00,  1.95547106e+01,
 # #        -9.07495402e+00,  3.34202879e-02, -7.39214576e+00,  3.99978552e+01])
 import pickle
-vv1, _, nx, _, nu, thetas, sigma,V, c1o, c2o = pickle.load( open('FIM.p', 'rb'))
+vv1, _, nx, _, nu, thetas, sigma,V, c1o, c2o = pickle.load( open('case_studies/MBDoE/FIM.p', 'rb'))
 
 s = utilities1.objective( f, vv1, 1, nx, 1, nu, thetas, sigma,V, c1o, c2o,'A', u_t.reshape(1, nu[0]))
 
@@ -234,6 +234,11 @@ def obj_norm(funs, u):
 def obj_MBDoE(select_design='A'):
     funs = construct_obj_MBDoE(select_design)
     return functools.partial(obj_norm, funs)
+
+
+def MBDoE(x):
+    obj_MBDoE(select_design='E')
+    return obj_MBDoE(x), [0.]
 
 def obj_MBDoE_moo(select_design='A', param=0.1):
     funs = construct_obj_MBDoE_moo(select_design, param)
