@@ -67,8 +67,9 @@ class BayesOpt(object):
         self.objective     = objective
         self.probabilistic = probabilistic
         self.print_iter    = print_iteration
-        if constraints is None:
+        if constraints is None or constraints==0:
             self.constraints = []
+            constraints = 0
         else:
             #self.constraints = constraints
             if not(casadi) and acquisition != 'EIC':
@@ -690,10 +691,14 @@ class BayesOpt(object):
         :rtype:          tensor
         """
         x = x_torch.detach().numpy().reshape(-1,)
-        obj_temp, con_temp = f(x)
+        if self.card_of_funcs>1:
+            obj_temp, con_temp = f(x)
 
-        y = np.array([obj_temp, *con_temp]).reshape(-1,)
+            y = np.array([obj_temp, *con_temp]).reshape(-1,)
+        else:
+            obj_temp = f(x)
 
+            y = np.array([obj_temp]).reshape(-1,)
         return torch.from_numpy(y).type(torch.FloatTensor)
 
     def extract_parameters(self, gp):
