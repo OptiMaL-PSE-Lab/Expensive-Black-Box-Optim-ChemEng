@@ -47,8 +47,8 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
-def plot_sys_respRand(pi, plot, method, x0 = [15, 15], xref = [10, 10], N=200, T=3):
-    _, sys_resp, control_resp = phi_rand(pi, x0 = x0, N = N, \
+def plot_sys_respSAA(pi, plot, method, x0 = [15, 15], xref = [10, 10], N=200, T=3):
+    _, sys_resp, control_resp = phi_SAA(pi, x0 = x0, N = N, \
                                     T = T, return_sys_resp = True)
     ax1, ax2 = plot
     x1 = np.array(sys_resp)[:,0] ; x2 = np.array(sys_resp)[:,1]
@@ -61,7 +61,17 @@ def plot_sys_respRand(pi, plot, method, x0 = [15, 15], xref = [10, 10], N=200, T
 
     return ax1, ax2
 
-
+def phi_SAA(x):
+    # x = extract_FT(x)
+    N_SAA = 5
+    
+    f = phi_rand
+    f_SAA = 0
+    
+    for i in range(N_SAA):
+        f_SAA += f(x)[0]/N_SAA
+    
+    return f_SAA, [0]
 
 x0 = np.array([4, 4, 4, 4])
 bounds = np.array([[0, 8], [0, 8], [0, 8], [0, 8]])
@@ -69,49 +79,49 @@ bounds = np.array([[0, 8], [0, 8], [0, 8], [0, 8]])
 max_f_eval = 100
 
 N = 10
-ContrLinRand_pybobyqa_list = []
+ContrLinSAA_pybobyqa_list = []
 for i in range(N):
-    ContrLinRand_pybobyqa = PyBobyqaWrapper().solve(phi_rand, x0, bounds=bounds.T, \
+    ContrLinSAA_pybobyqa = PyBobyqaWrapper().solve(phi_SAA, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=1, seek_global_minimum = True)
-    ContrLinRand_pybobyqa_list.append(ContrLinRand_pybobyqa)
+    ContrLinSAA_pybobyqa_list.append(ContrLinSAA_pybobyqa)
 print('10 Py-BOBYQA iterations completed')
 
 N = 10
-ContrLinRand_Nest_list = []
+ContrLinSAA_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    ContrLinRand_Nest = nesterov_random(phi_rand, x0, bounds, max_iter = 100, \
+    ContrLinSAA_Nest = nesterov_random(phi_SAA, x0, bounds, max_iter = 100, \
                           constraints = 1, rnd_seed = i, alpha = 1e-5, mu = 1e-1, max_f_eval= max_f_eval)
-    ContrLinRand_Nest_list.append(ContrLinRand_Nest)
+    ContrLinSAA_Nest_list.append(ContrLinSAA_Nest)
 print('10 Nesterov iterations completed')
 
 N = 10
-ContrLinRand_simplex_list = []
+ContrLinSAA_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    ContrLinRand_simplex = simplex_method(phi_rand, x0, bounds, max_iter = 100, \
+    ContrLinSAA_simplex = simplex_method(phi_SAA, x0, bounds, max_iter = 100, \
                             constraints = 1, rnd_seed = i, max_f_eval= max_f_eval)
-    ContrLinRand_simplex_list.append(ContrLinRand_simplex)
+    ContrLinSAA_simplex_list.append(ContrLinSAA_simplex)
 print('10 simplex iterations completed')
 
 N = 10
-ContrLinRand_FiniteDiff_list = []
-ContrLinRand_BFGS_list = []
-ContrLinRand_Adam_list = []
+ContrLinSAA_FiniteDiff_list = []
+ContrLinSAA_BFGS_list = []
+ContrLinSAA_Adam_list = []
 for i in range(N):
-    ContrLinRand_FiniteDiff = finite_Diff_Newton(phi_rand, x0, bounds = bounds, \
+    ContrLinSAA_FiniteDiff = finite_Diff_Newton(phi_SAA, x0, bounds = bounds, \
                                     con_weight = 100)
     
-    ContrLinRand_BFGS = BFGS_optimizer(phi_rand, x0, bounds = bounds, \
+    ContrLinSAA_BFGS = BFGS_optimizer(phi_SAA, x0, bounds = bounds, \
                           con_weight = 100)
     
-    ContrLinRand_Adam = Adam_optimizer(phi_rand, x0, method = 'forward', \
+    ContrLinSAA_Adam = Adam_optimizer(phi_SAA, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
                                       max_f_eval = 100, con_weight = 100)
-    ContrLinRand_FiniteDiff_list.append(ContrLinRand_FiniteDiff)
-    ContrLinRand_BFGS_list.append(ContrLinRand_BFGS)
-    ContrLinRand_Adam_list.append(ContrLinRand_Adam)
+    ContrLinSAA_FiniteDiff_list.append(ContrLinSAA_FiniteDiff)
+    ContrLinSAA_BFGS_list.append(ContrLinSAA_BFGS)
+    ContrLinSAA_Adam_list.append(ContrLinSAA_Adam)
 print('10 iterations of simplex, BFGS and Adam completed')
 
 
@@ -120,53 +130,53 @@ N_min_s = 15
 init_radius = 4
 method = 'Discrimination'
 N = 10
-ContrLinRand_CUATRO_global_list = []
+ContrLinSAA_CUATRO_global_list = []
 for i in range(N):
     rnd_seed = i
-    ContrLinRand_CUATRO_global = CUATRO(phi_rand, x0, init_radius, bounds = bounds, \
+    ContrLinSAA_CUATRO_global = CUATRO(phi_SAA, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'global', \
                           constr_handling = method)
-    ContrLinRand_CUATRO_global_list.append(ContrLinRand_CUATRO_global)
+    ContrLinSAA_CUATRO_global_list.append(ContrLinSAA_CUATRO_global)
 print('10 CUATRO global iterations completed')    
     
 N_min_s = 6
 init_radius = 4
 method = 'Fitting'
 N = 10
-ContrLinRand_CUATRO_local_list = []
+ContrLinSAA_CUATRO_local_list = []
 for i in range(N):
     rnd_seed = i
-    ContrLinRand_CUATRO_local = CUATRO(phi_rand, x0, init_radius, bounds = bounds, \
+    ContrLinSAA_CUATRO_local = CUATRO(phi_SAA, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'local', \
                           constr_handling = method)
-    ContrLinRand_CUATRO_local_list.append(ContrLinRand_CUATRO_local)
+    ContrLinSAA_CUATRO_local_list.append(ContrLinSAA_CUATRO_local)
 print('10 CUATRO local iterations completed') 
 
 N = 10
-ContrLinRand_SQSnobFit_list = []
+ContrLinSAA_SQSnobFit_list = []
 for i in range(N):
-    ContrLinRand_SQSnobFit = SQSnobFitWrapper().solve(phi_rand, x0, bounds, \
+    ContrLinSAA_SQSnobFit = SQSnobFitWrapper().solve(phi_SAA, x0, bounds, \
                                     maxfun = max_f_eval, constraints=2)
-    ContrLinRand_SQSnobFit_list.append(ContrLinRand_SQSnobFit)
+    ContrLinSAA_SQSnobFit_list.append(ContrLinSAA_SQSnobFit)
 print('10 SnobFit iterations completed') 
 
 N = 10
-ContrLinRand_DIRECT_list = []
-ContrLinRand_DIRECT_f = lambda x, grad:phi(x)
+ContrLinSAA_DIRECT_list = []
+ContrLinSAA_DIRECT_f = lambda x, grad: phi_SAA(x)
 for i in range(N):
-    ContrLinRand_DIRECT =  DIRECTWrapper().solve(ContrLinRand_DIRECT_f, x0, bounds, \
+    ContrLinSAA_DIRECT =  DIRECTWrapper().solve(ContrLinSAA_DIRECT_f, x0, bounds, \
                                     maxfun = max_f_eval, constraints=1)
-    ContrLinRand_DIRECT_list.append(ContrLinRand_DIRECT)
+    ContrLinSAA_DIRECT_list.append(ContrLinSAA_DIRECT)
 print('10 DIRECT iterations completed')     
 
 
-# with open('BayesContrLinRand_list.pickle', 'rb') as handle:
-#     ContrLinRand_Bayes_list = pickle.load(handle)
+# with open('BayesContrLinSAA_list.pickle', 'rb') as handle:
+#     ContrLinSAA_Bayes_list = pickle.load(handle)
 
 # N = 10
-# ContrLinRand_Bayes_list = []
+# ContrLinSAA_Bayes_list = []
 # for i in range(1):
 #     Bayes = BayesOpt()
 #     pyro.set_rng_seed(i)
@@ -178,191 +188,191 @@ print('10 DIRECT iterations completed')
 #     else:
 #         nbr_feval = 20
     
-    # ContrLinRand_Bayes = Bayes.solve(phi_rand, x0, acquisition='EI',bounds=bounds.T, \
+    # ContrLinSAA_Bayes = Bayes.solve(phi_SAA, x0, acquisition='EI',bounds=bounds.T, \
     #                         print_iteration = True, constraints=1, casadi=True, \
     #                         maxfun = nbr_feval, ).output_dict
-#     ContrLinRand_Bayes_list.append(ContrLinRand_Bayes)
+#     ContrLinSAA_Bayes_list.append(ContrLinSAA_Bayes)
  
 # print('10 BayesOpt iterations completed')
 
-# with open('BayesContrLinRand_list.pickle', 'wb') as handle:
-#     pickle.dump(ContrLinRand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('BayesContrLinSAA_list.pickle', 'wb') as handle:
+#     pickle.dump(ContrLinSAA_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_pybobyqa_list)):
-    x_best = np.array(ContrLinRand_pybobyqa_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_pybobyqa_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_pybobyqa_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_pybobyqa_list)):
+    x_best = np.array(ContrLinSAA_pybobyqa_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_pybobyqa_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_pybobyqa_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Py-BOBYQA'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_PyBOBYQA_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_PyBOBYQA_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_FiniteDiff_list)):
-    x_best = np.array(ContrLinRand_FiniteDiff_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_FiniteDiff_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_FiniteDiff_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_FiniteDiff_list)):
+    x_best = np.array(ContrLinSAA_FiniteDiff_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_FiniteDiff_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_FiniteDiff_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Fin. Diff.'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_FiniteDiff_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_FiniteDiff_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_BFGS_list)):
-    x_best = np.array(ContrLinRand_BFGS_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_BFGS_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_BFGS_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_BFGS_list)):
+    x_best = np.array(ContrLinSAA_BFGS_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_BFGS_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_BFGS_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'BFGS'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_BFGS_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_BFGS_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_Adam_list)):
-    x_best = np.array(ContrLinRand_Adam_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_Adam_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_Adam_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_Adam_list)):
+    x_best = np.array(ContrLinSAA_Adam_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_Adam_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_Adam_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Adam'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_Adam_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_Adam_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_CUATRO_global_list)):
-    x_best = np.array(ContrLinRand_CUATRO_global_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_CUATRO_global_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_CUATRO_global_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_CUATRO_global_list)):
+    x_best = np.array(ContrLinSAA_CUATRO_global_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_CUATRO_global_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_CUATRO_global_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_g'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_g'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_CUATROg_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_CUATROg_Convergence_plot.svg', format = "svg")
 
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_CUATRO_local_list)):
-    x_best = np.array(ContrLinRand_CUATRO_local_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_CUATRO_local_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_CUATRO_local_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_CUATRO_local_list)):
+    x_best = np.array(ContrLinSAA_CUATRO_local_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_CUATRO_local_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_CUATRO_local_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'CUATRO_l'+str(i))
     # ax1.plot(x_ind, f_best, label = 'CUATRO_l'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_CUATROl_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_CUATROl_Convergence_plot.svg', format = "svg")
 
 # fig1 = plt.figure()
 # ax1 = fig1.add_subplot()
-# for i in range(len(ContrLinRand_Bayes_list)):
-#     x_best = np.array(ContrLinRand_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(ContrLinRand_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(ContrLinRand_Bayes_list[i]['f_store'])
+# for i in range(len(ContrLinSAA_Bayes_list)):
+#     x_best = np.array(ContrLinSAA_Bayes_list[i]['x_best_so_far'])
+#     f_best = np.array(ContrLinSAA_Bayes_list[i]['f_best_so_far'])
+#     nbr_feval = len(ContrLinSAA_Bayes_list[i]['f_store'])
 #     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
 #           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
 # ax1.legend()
 # ax1.set_xlabel('Nbr. of function evaluations')
 # ax1.set_ylabel('Best function evaluation')
 # ax1.set_yscale('log')
-# fig1.savefig('Controller_Random_plots/Controller_BO_Convergence_plot.svg', format = "svg")
+# fig1.savefig('Controller_SAA_plots/Controller_BO_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_simplex_list)):
-    x_best = np.array(ContrLinRand_simplex_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_simplex_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_simplex_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_simplex_list)):
+    x_best = np.array(ContrLinSAA_simplex_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_simplex_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_simplex_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Simplex'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
-fig1.savefig('Controller_Random_plots/Controller_Simplex_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_Simplex_Convergence_plot.svg', format = "svg")
 
 
 ## Change to x_best_So_far
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_Nest_list)):
-    x_best = np.array(ContrLinRand_Nest_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_Nest_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_Nest_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_Nest_list)):
+    x_best = np.array(ContrLinSAA_Nest_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_Nest_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_Nest_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'Nest.'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
-fig1.savefig('Controller_Random_plots/Controller_Nesterov_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_Nesterov_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_SQSnobFit_list)):
-    x_best = np.array(ContrLinRand_SQSnobFit_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_SQSnobFit_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_SQSnobFit_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_SQSnobFit_list)):
+    x_best = np.array(ContrLinSAA_SQSnobFit_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_SQSnobFit_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_SQSnobFit_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'SQSnobfit.'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
-fig1.savefig('Controller_Random_plots/Controller_SQSnobFit_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_SQSnobFit_Convergence_plot.svg', format = "svg")
 
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
-for i in range(len(ContrLinRand_DIRECT_list)):
-    x_best = np.array(ContrLinRand_DIRECT_list[i]['x_best_so_far'])
-    f_best = np.array(ContrLinRand_DIRECT_list[i]['f_best_so_far'])
-    x_ind = np.array(ContrLinRand_DIRECT_list[i]['samples_at_iteration'])
+for i in range(len(ContrLinSAA_DIRECT_list)):
+    x_best = np.array(ContrLinSAA_DIRECT_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinSAA_DIRECT_list[i]['f_best_so_far'])
+    x_ind = np.array(ContrLinSAA_DIRECT_list[i]['samples_at_iteration'])
     ax1.step(x_ind, f_best, where = 'post', label = 'DIRECT'+str(i))
 ax1.legend()
 ax1.set_yscale('log')
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
-fig1.savefig('Controller_Random_plots/Controller_DIRECT_Convergence_plot.svg', format = "svg")
+fig1.savefig('Controller_SAA_plots/Controller_DIRECT_Convergence_plot.svg', format = "svg")
 
 
-sol_Cg = average_from_list(ContrLinRand_CUATRO_global_list)
+sol_Cg = average_from_list(ContrLinSAA_CUATRO_global_list)
 test_CUATROg, test_av_CUATROg, test_min_CUATROg, test_max_CUATROg = sol_Cg
-sol_Cl = average_from_list(ContrLinRand_CUATRO_local_list)
+sol_Cl = average_from_list(ContrLinSAA_CUATRO_local_list)
 test_CUATROl, test_av_CUATROl, test_min_CUATROl, test_max_CUATROl = sol_Cl
-sol_Nest = average_from_list(ContrLinRand_Nest_list)
+sol_Nest = average_from_list(ContrLinSAA_Nest_list)
 test_Nest, test_av_Nest, test_min_Nest, test_max_Nest = sol_Nest
-sol_Splx = average_from_list(ContrLinRand_simplex_list)
+sol_Splx = average_from_list(ContrLinSAA_simplex_list)
 test_Splx, test_av_Splx, test_min_Splx, test_max_Splx = sol_Splx
-sol_SQSF = average_from_list(ContrLinRand_SQSnobFit_list)
+sol_SQSF = average_from_list(ContrLinSAA_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
-sol_DIR = average_from_list(ContrLinRand_DIRECT_list)
+sol_DIR = average_from_list(ContrLinSAA_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
-sol_pybbyqa = average_from_list(ContrLinRand_pybobyqa_list)
+sol_pybbyqa = average_from_list(ContrLinSAA_pybobyqa_list)
 test_pybbqa, test_av_pybbqa, test_min_pybbqa, test_max_pybbqa = sol_pybbyqa
-sol_findiff = average_from_list(ContrLinRand_FiniteDiff_list)
+sol_findiff = average_from_list(ContrLinSAA_FiniteDiff_list)
 test_findiff, test_av_findiff, test_min_findiff, test_max_findiff = sol_findiff
-sol_BFGS = average_from_list(ContrLinRand_BFGS_list)
+sol_BFGS = average_from_list(ContrLinSAA_BFGS_list)
 test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
-sol_Adam = average_from_list(ContrLinRand_Adam_list)
+sol_Adam = average_from_list(ContrLinSAA_Adam_list)
 test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
 
 
@@ -386,7 +396,7 @@ ax.fill_between(np.arange(1, 101), test_min_SQSF, \
 ax.legend()
 ax.set_yscale('log')
 ax.set_xlim([0, 99])    
-fig.savefig('Controller_publication_plots/PromisingMethodsRand.svg', format = "svg")
+fig.savefig('Controller_publication_plots/PromisingMethodsSAA.svg', format = "svg")
 
 
 fig = plt.figure()
@@ -413,7 +423,7 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 ax.legend()
 ax.set_yscale('log')
 ax.set_xlim([0, 99])
-fig.savefig('Controller_publication_plots/NotSoPromisingMethodsRand.svg', format = "svg")
+fig.savefig('Controller_publication_plots/NotSoPromisingMethodsSAA.svg', format = "svg")
 
 
 
@@ -430,8 +440,8 @@ fig.savefig('Controller_publication_plots/NotSoPromisingMethodsRand.svg', format
 # ax1.plot([0, T], [10, 10], '--k', label = '$x_{1,ss}$ and $x_{2,ss}$')
 # method = 'CUATRO_l'
 # plot_stuff = (ax1, ax2)
-# plot_intermediate = plot_sys_respRand(pi, plot_stuff, method, x0 = [15, 15], xref = [10, 10], N=200, T=3)
-# ax1, ax2 = plot_sys_respRand([4]*4, plot_intermediate, 'Initial', x0 = [15, 15], xref = [10, 10], N=200, T=3)
+# plot_intermediate = plot_sys_respSAA(pi, plot_stuff, method, x0 = [15, 15], xref = [10, 10], N=200, T=3)
+# ax1, ax2 = plot_sys_respSAA([4]*4, plot_intermediate, 'Initial', x0 = [15, 15], xref = [10, 10], N=200, T=3)
 # ax1.legend()
 # ax2.legend()
 # ax1.set_xlabel('T')
