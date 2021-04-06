@@ -61,9 +61,11 @@ def Problem_rosenbrockNoise(x, noise_std, N_SAA):
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([-0.5,1.5])
 
+
+
 # max_f_eval = 100
 # max_it = 50
-nbr_feval = 50
+nbr_feval = 30
 
 N = 10
 RB_Bayes_list = []
@@ -90,7 +92,7 @@ for i in range(N):
     RBRand_Bayes = Bayes.solve(Problem_rosenbrockRand, x0, acquisition='EI',bounds=bounds.T, \
                             print_iteration = True, constraints=2, casadi=True, \
                             maxfun = nbr_feval, ).output_dict
-    RBRand_Bayes_list.append(RB_Bayes)
+    RBRand_Bayes_list.append(RBRand_Bayes)
  
 print('10 BayesOpt random iterations completed')
 
@@ -151,6 +153,7 @@ with open('BayesRB_listNoiseConstr.pickle', 'wb') as handle:
     
 
 N_SAA = 2
+nbr_feval = 30
 N_samples = 20
 RBnoiseSAA_list_Bayes = []
 RBconstraintSAA_list_Bayes = []

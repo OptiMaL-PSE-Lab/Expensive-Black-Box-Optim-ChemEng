@@ -212,29 +212,6 @@ print('10 DIRECT iterations completed')
 with open('BayesRB_listRandSAA.pickle', 'rb') as handle:
     RBSAA_Bayes_list = pickle.load(handle)
 
-# N = 10
-# RBSAA_Bayes_list = []
-# for i in range(N):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-#     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     RBSAA_Bayes_list.append(RB_Bayes)
- 
-# print('10 BayesOpt iterations completed')
-
-# with open('BayesRB_listRandSAA10.pickle', 'wb') as handle:
-#     pickle.dump(RBSAA_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
 
 
 
@@ -505,8 +482,8 @@ sol_SQSF = average_from_list(RBSAA_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(RBSAA_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
-# sol_BO = average_from_list(RBSAA_Bayes_list)
-# test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
+sol_BO = average_from_list(RBSAA_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
@@ -523,12 +500,11 @@ ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 f_best = np.array(RBSAA_Bayes_list[0]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
-f_best = np.array(RBSAA_Bayes_list[1]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO', c = 'r')
-## BO placeholder: red
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5)
+
 
 ax.legend()
 ax.set_yscale('log')

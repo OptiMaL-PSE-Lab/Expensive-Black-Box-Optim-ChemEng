@@ -30,7 +30,10 @@ class SQSnobFitWrapper:
         if (constraints)==0:#constraints==None:
 
             self.card_of_funcs = 1
-            _, sol1 = self.solve_naked(objfun, x0, bounds, maxfun-1)
+            self.Penaly_fun = PenaltyFunctions(objfun, type_penalty=penalty_con, \
+                                               mu = mu_con)
+            f_pen = self.Penaly_fun.aug_obj
+            _, sol1 = self.solve_naked(f_pen, x0, bounds, maxfun-1)
             
         else:
             #self.constraints = constraints
@@ -106,11 +109,9 @@ class SQSnobFitWrapper:
                     f_so_far[iter] = min_f
                     g_so_far[iter,:] = min_g
                     x_so_far[iter] = sol[index, 1:]
+        
+        return f_so_far, g_so_far, x_so_far
 
-        if self.card_of_funcs>1:
-            return f_so_far, g_so_far, x_so_far
-        else:
-            return f_so_far, x_so_far
 
     
 # bounds = np.array([[-1.5,1.5],[-1.5,1.5]])

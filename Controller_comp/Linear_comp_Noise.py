@@ -54,7 +54,7 @@ def average_from_list(solutions_list):
 
 def phi_Noise(x, noise, N_SAA):
     
-    f = phi
+    f = lambda x: phi_rand(x, deviation = noise)
     f_SAA = 0
     
     for i in range(N_SAA):

@@ -70,9 +70,6 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
             
-    
-    
-
 
 class RB:
     def __init__(self, objective, ineq = []):
@@ -188,29 +185,6 @@ print('10 DIRECT iterations completed')
 with open('BayesRB_list.pickle', 'rb') as handle:
     RB_Bayes_list = pickle.load(handle)
 
-# N = 10
-# RB_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-#     RB_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     RB_Bayes_list.append(RB_Bayes)
- 
-# print('10 BayesOpt iterations completed')
-
-# with open('BayesRB_list.pickle', 'wb') as handle:
-#     pickle.dump(RB_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
 
 
 x_best_pyBbyqa = np.array(RB_pybobyqa['x_best_so_far'])
@@ -313,28 +287,28 @@ ax2.set_ylim(bounds[1])
 fig1.savefig('RB_plots/RB_CUATROl_Convergence_plot.svg', format = "svg")
 fig2.savefig('RB_plots/RB_CUATROl_2Dspace_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2, fig2 = trust_fig(oracle, bounds)
-# for i in range(len(RB_Bayes_list)):
-#     x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(RB_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax2.set_xlabel('$x_1$')
-# ax2.set_ylabel('$x_2$')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
-# fig1.savefig('RB_plots/RB_BO_Convergence_plot.svg', format = "svg")
-# fig2.savefig('RB_plots/RB_BO_2Dspace_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(RB_Bayes_list)):
+    x_best = np.array(RB_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(RB_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots/RB_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots/RB_BO_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -436,6 +410,8 @@ sol_SQSF = average_from_list(RB_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(RB_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+sol_BO = average_from_list(RB_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 
 fig = plt.figure()
@@ -451,9 +427,10 @@ ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
-f_best = np.array(RB_Bayes_list[0]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5)
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')

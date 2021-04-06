@@ -23,7 +23,7 @@ from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
 from algorithms.SQSnobfit_wrapped.Wrapper_for_SQSnobfit import SQSnobFitWrapper
 from algorithms.DIRECT_wrapped.Wrapper_for_Direct import DIRECTWrapper
 
-from case_studies.Controller_tuning.Control_system import phi, phi_rand
+from case_studies.Controller_tuning.Control_system import phi_rand
 
 import matplotlib.pyplot as plt
 
@@ -147,14 +147,17 @@ print('10 CUATRO local iterations completed')
 N = 10
 ContrLinRand_SQSnobFit_list = []
 for i in range(N):
-    ContrLinRand_SQSnobFit = SQSnobFitWrapper().solve(phi_rand, x0, bounds, \
-                                    maxfun = max_f_eval, constraints=2)
-    ContrLinRand_SQSnobFit_list.append(ContrLinRand_SQSnobFit)
+    try:
+        ContrLinRand_SQSnobFit = SQSnobFitWrapper().solve(phi_rand, x0, bounds, \
+                                    maxfun = max_f_eval, constraints=1)
+        ContrLinRand_SQSnobFit_list.append(ContrLinRand_SQSnobFit)
+    except:
+        print('SQSnobfit iteration ', i, ' failed')
 print('10 SnobFit iterations completed') 
 
 N = 10
 ContrLinRand_DIRECT_list = []
-ContrLinRand_DIRECT_f = lambda x, grad:phi(x)
+ContrLinRand_DIRECT_f = lambda x, grad: phi_rand(x)
 for i in range(N):
     ContrLinRand_DIRECT =  DIRECTWrapper().solve(ContrLinRand_DIRECT_f, x0, bounds, \
                                     maxfun = max_f_eval, constraints=1)
@@ -165,28 +168,29 @@ print('10 DIRECT iterations completed')
 # with open('BayesContrLinRand_list.pickle', 'rb') as handle:
 #     ContrLinRand_Bayes_list = pickle.load(handle)
 
-# N = 10
-# ContrLinRand_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
+N = 10
+ContrLinRand_Bayes_list = []
+for i in range(1):
+    Bayes = BayesOpt()
+    pyro.set_rng_seed(i)
     
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-    # ContrLinRand_Bayes = Bayes.solve(phi_rand, x0, acquisition='EI',bounds=bounds.T, \
-    #                         print_iteration = True, constraints=1, casadi=True, \
-    #                         maxfun = nbr_feval, ).output_dict
-#     ContrLinRand_Bayes_list.append(ContrLinRand_Bayes)
+    if i<3:
+        nbr_feval = 40
+    elif i<6:
+        nbr_feval = 30
+    else:
+        nbr_feval = 20
+        
+    phi_unconRand = lambda x: phi_rand(x)[0]
+    ContrLinRand_Bayes = Bayes.solve(phi_unconRand, x0, acquisition='EI',bounds=bounds.T, \
+                            print_iteration = True, constraints=0, casadi=True, \
+                            maxfun = 40, ).output_dict
+    ContrLinRand_Bayes_list.append(ContrLinRand_Bayes)
  
-# print('10 BayesOpt iterations completed')
+print('10 BayesOpt iterations completed')
 
-# with open('BayesContrLinRand_list.pickle', 'wb') as handle:
-#     pickle.dump(ContrLinRand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('BayesContrLinRand_list.pickle', 'wb') as handle:
+    pickle.dump(ContrLinRand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 fig1 = plt.figure()
@@ -274,19 +278,19 @@ ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
 fig1.savefig('Controller_Random_plots/Controller_CUATROl_Convergence_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# for i in range(len(ContrLinRand_Bayes_list)):
-#     x_best = np.array(ContrLinRand_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(ContrLinRand_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(ContrLinRand_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax1.set_yscale('log')
-# fig1.savefig('Controller_Random_plots/Controller_BO_Convergence_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+for i in range(len(ContrLinRand_Bayes_list)):
+    x_best = np.array(ContrLinRand_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLinRand_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(ContrLinRand_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax1.set_yscale('log')
+fig1.savefig('Controller_Random_plots/Controller_BO_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -381,6 +385,9 @@ ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
+f_best = np.array(ContrLinRand_Bayes_list[0]['f_best_so_far'])
+ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO', c = 'r')
 ## BO placeholder: red
 
 ax.legend()

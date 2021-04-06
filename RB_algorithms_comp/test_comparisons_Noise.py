@@ -134,11 +134,9 @@ for i in range(n_noise):
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
 x0 = np.array([-0.5,1.5])
 
-# max_f_eval = 100
-max_f_eval = 50
+max_f_eval = 100 ; N_SAA = 1
+# max_f_eval = 50 ; N_SAA = 2
 max_it = 100
-
-N_SAA = 2
 
 
 N_samples = 20
@@ -220,6 +218,12 @@ for i in range(n_noise):
     RBconstraint_list_CUATROg.append(best_constr)
     
 
+with open('BayesRB_listNoiseConv.pickle', 'rb') as handle:
+    RBnoise_list_Bayes = pickle.load(handle)
+    
+with open('BayesRB_listNoiseConstr.pickle', 'rb') as handle:
+    RBconstraint_list_Bayes = pickle.load(handle)
+
 
 noise = ['%.3f' % noise_matrix[i][0] for i in range(n_noise)]
 noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
@@ -228,16 +232,19 @@ noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
 convergence = list(itertools.chain(*RBnoise_list_pybbqa)) + \
               list(itertools.chain(*RBnoise_list_SQSF)) + \
               list(itertools.chain(*RBnoise_list_DIRECT)) + \
-              list(itertools.chain(*RBnoise_list_CUATROg))
+              list(itertools.chain(*RBnoise_list_CUATROg)) + \
+              list(itertools.chain(*RBnoise_list_Bayes))
               
 constraints = list(itertools.chain(*RBconstraint_list_pybbqa)) + \
               list(itertools.chain(*RBconstraint_list_SQSF)) + \
               list(itertools.chain(*RBconstraint_list_DIRECT)) + \
-              list(itertools.chain(*RBconstraint_list_CUATROg))
+              list(itertools.chain(*RBconstraint_list_CUATROg)) + \
+              list(itertools.chain(*RBconstraint_list_Bayes))   
               
-noise = list(itertools.chain(*noise_labels))*4
-method = ['Py-BOBYQA']*int(len(noise)/4) + ['SQSnobfit']*int(len(noise)/4) + \
-          ['DIRECT']*int(len(noise)/4) + ['CUATRO_g']*int(len(noise)/4)
+noise = list(itertools.chain(*noise_labels))*5
+method = ['Py-BOBYQA']*int(len(noise)/5) + ['SQSnobfit']*int(len(noise)/5) + \
+          ['DIRECT']*int(len(noise)/5) + ['CUATRO_g']*int(len(noise)/5) + \
+           ['Bayes. opt']*int(len(noise)/5)   
 
 data = {'Best function evaluation': convergence, \
         "Constraint violation": constraints, \
@@ -247,7 +254,8 @@ df = pd.DataFrame(data)
 
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('Publication plots format/SAA2feval50Convergence.svg', format = "svg")
+plt.savefig('Publication plots format/feval100Convergence.svg', format = "svg")
+plt.show()
 # ax.set_ylim([0.1, 10])
 # ax.set_yscale("log")
 plt.clf()
@@ -256,7 +264,7 @@ ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", fliersize = 0)
 ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", dodge = True)
-plt.savefig('Publication plots format/SAA2feval50Constraints.svg', format = "svg")
+plt.savefig('Publication plots format/feval100Constraints.svg', format = "svg")
 
 
 ### Plots

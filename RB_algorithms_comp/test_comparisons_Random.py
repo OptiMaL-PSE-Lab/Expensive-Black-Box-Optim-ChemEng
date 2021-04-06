@@ -205,31 +205,9 @@ for i in range(N):
     RBRand_DIRECT_list.append(RBRand_DIRECT)
 print('10 DIRECT iterations completed')    
 
-# with open('BayesRB_listRand.pickle', 'rb') as handle:
-#     RBRand_Bayes_list = pickle.load(handle)
 
-# N = 10
-# RBRand_Bayes_list = []
-# for i in range(N):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-#     RBRand_Bayes = Bayes.solve(Problem_rosenbrock, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     RBRand_Bayes_list.append(RB_Bayes)
- 
-# print('10 BayesOpt iterations completed')
-
-# with open('BayesRB_listRand.pickle', 'wb') as handle:
-#     pickle.dump(RBRand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('BayesRB_listRand.pickle', 'rb') as handle:
+    RBRand_Bayes_list = pickle.load(handle)
 
 
 f_RB = lambda x, y: (1 - x)**2 + 100*(y - x**2)**2
@@ -370,24 +348,24 @@ ax2.set_ylim(bounds[1])
 fig1.savefig('RB_plots_Random/RBRand_CUATROl_Convergence_plot.svg', format = "svg")
 fig2.savefig('RB_plots_Random/RBRand_CUATROl_2Dspace_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2, fig2 = trust_fig(oracle, bounds)
-# for i in range(len(RBRand_Bayes_list)):
-#     x_best = np.array(RBRand_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(RBRadn_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(RBRand_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
-# fig1.savefig('RB_plots_Random/RBRand_BO_Convergence_plot.svg', format = "svg")
-# fig2.savefig('RB_plots_Random/RBRand_BO_2Dspace_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(RBRand_Bayes_list)):
+    x_best = np.array(RBRand_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(RBRand_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(RBRand_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('RB_plots_Random/RBRand_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_Random/RBRand_BO_2Dspace_plot.svg', format = "svg")
     
 
 fig1 = plt.figure()
@@ -498,6 +476,9 @@ sol_SQSF = average_from_list(RBRand_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(RBRand_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+sol_BO = average_from_list(RBRand_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
+
 
 
 fig = plt.figure()
@@ -514,7 +495,10 @@ ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
-## BO placeholder: red
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
+          label = 'BO', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5)
 
 ax.legend()
 ax.set_yscale('log')

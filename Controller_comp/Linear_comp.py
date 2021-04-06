@@ -69,14 +69,6 @@ ContrLin_pybobyqa = PyBobyqaWrapper().solve(phi, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=1, \
                                       seek_global_minimum = True)
 
-ContrLin_Nest_list = []
-phi_uncon = lambda x: phi(x)[0]
-ContrLin_Bayes = BayesOpt().solve(phi_uncon, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, casadi=True, \
-                            maxfun = max_f_eval, ).output_dict
-
-
-
 
 N = 10
 ContrLin_Nest_list = []
@@ -138,9 +130,12 @@ print('10 CUATRO local iterations completed')
 N = 10
 ContrLin_SQSnobFit_list = []
 for i in range(N):
-    ContrLin_SQSnobFit = SQSnobFitWrapper().solve(phi, x0, bounds, \
+    try:
+        ContrLin_SQSnobFit = SQSnobFitWrapper().solve(phi, x0, bounds, \
                                     maxfun = max_f_eval, constraints=1)
-    ContrLin_SQSnobFit_list.append(ContrLin_SQSnobFit)
+        ContrLin_SQSnobFit_list.append(ContrLin_SQSnobFit)
+    except:
+        print('SQSnobfit iteration ', i, ' failed')
 print('10 SnobFit iterations completed') 
 
 N = 10
@@ -168,8 +163,9 @@ for i in range(1):
     else:
         nbr_feval = 20
     
-    ContrLin_Bayes = Bayes.solve(phi, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=1, casadi=True, \
+    phi_uncon = lambda x: phi(x)[0]
+    ContrLin_Bayes = Bayes.solve(phi_uncon, x0, acquisition='EI',bounds=bounds.T, \
+                            print_iteration = True, constraints=0, casadi=True, \
                             maxfun = nbr_feval, ).output_dict
     ContrLin_Bayes_list.append(ContrLin_Bayes)
 
@@ -246,19 +242,19 @@ ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
 fig1.savefig('Controller_plots/Controller_CUATROl_Convergence_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# for i in range(len(ContrLin_Bayes_list)):
-#     x_best = np.array(ContrLin_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(ContrLin_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(ContrLin_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax1.set_yscale('log')
-# fig1.savefig('Controller_plots/Controller_BO_Convergence_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+for i in range(len(ContrLin_Bayes_list)):
+    x_best = np.array(ContrLin_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(ContrLin_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(ContrLin_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax1.set_yscale('log')
+fig1.savefig('Controller_plots/Controller_BO_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -343,9 +339,9 @@ ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
-# f_best = np.array(ContrLin_Bayes_list[0]['f_best_so_far'])
-# ax.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO', c = 'r')
+f_best = np.array(ContrLin_Bayes_list[0]['f_best_so_far'])
+ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO', c = 'r')
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
