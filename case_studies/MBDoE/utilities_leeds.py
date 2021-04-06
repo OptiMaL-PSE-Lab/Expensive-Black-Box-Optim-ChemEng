@@ -431,7 +431,7 @@ def objective_moo(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, 
 
     return obj
 
-def objective(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, select_design,u):
+def objective(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, select_design, show, u):
 
     ntheta = len(theta)
     x_meas1 = np.zeros([N_exp + 10, nx[0], n_points + 1])
@@ -472,8 +472,25 @@ def objective(f, V_old, N_exp, nx, n_points, nu, theta, sigma, V, c1o, c2o, sele
         vv1 += (xp_r[:-1, :].T @ np.linalg.inv(np.diag(np.square(sigma[:]))) @ xp_r[:-1, :])
         vv = np.linalg.inv(vv1)
     obj =-designs(vv1, select_design)#np.min(np.linalg.eig(vv1)[0])#np.log(np.linalg.det(vv1)+0.0001)#-## np.linalg.eig(vv)[0][0]#
+    if show==False:
+        return obj
+    else:
+        return obj, vv
 
+def diistance_from_space_filling(us, u):
+
+    obj = sum(np.abs((u - us)))
     return obj
+
+def explore(u):
+    obj =0
+    for i in range(len(u)):
+        for j in range(len(u)):
+
+            obj += -(u[i]-u[j])**2
+    return obj
+
+
 
 def designs(x, select_design='A', param=0.1):
     if select_design=='A':
@@ -492,6 +509,25 @@ def designs(x, select_design='A', param=0.1):
         return (1-param)*np.min(np.linalg.eig(x)[0])+ param*np.log(np.linalg.det(x)+0.0001)
     elif select_design=='MOO3':
         return (1-param)*np.min(np.linalg.eig(x)[0])+ param*np.sort(np.linalg.eig(x)[0])[1]
+    elif select_design=='cov_A':
+        H = np.linalg.pinv(x)
+        return -np.trace(H)
+    elif select_design=='cov_D':
+        H = np.linalg.pinv(x)
+
+        return -np.log(np.linalg.det(H)+0.0001)
+    elif select_design=='cov_E':
+        H = np.linalg.pinv(x)
+
+        return -np.max(np.linalg.eig(H)[0])
+    elif select_design=='cov_E1':
+        H = np.linalg.pinv(x)
+
+        return -np.sort(np.linalg.eig(H)[0])[-2]
+    elif select_design=='cov_rank':
+        H = np.linalg.pinv(x)
+
+        return -np.sort(np.linalg.eig(H)[0])[0]/np.sort(np.linalg.eig(H)[0])[1]
 
 
 def objective_pe_mcmc(theta, kwargs):#, ):

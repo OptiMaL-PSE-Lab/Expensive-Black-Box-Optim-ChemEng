@@ -1,29 +1,25 @@
-from case_studies.MBDoE.construct_MBDoE_funs import obj_MBDoE, MBDoE
-from algorithms.PyBobyqa_wrapped.Wrapper_for_pybobyqa import PyBobyqaWrapper
+from case_studies.MBDoE.construct_MBDoE_funs import set_funcs_mbdoe
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 import numpy as np
 
 
-obj = MBDoE#obj_MBDoE('E')
+bounds = np.array([[0,1.],[0,1.],[0,1.],[0,1.]])
+x0 = np.array([0.1]*4)
+
+
+#soln = PyBobyqaWrapper().solve(obj, x0, bounds=bounds.T,constraints=[g], maxfun=1000)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
+
 
 
 bounds = np.array([[0,1.],[0,1.],[0,1.],[0,1.]])
 x0 = np.array([0.1]*4)
 
-obj_uncon = lambda x: MBDoE(x)[0]
-soln = PyBobyqaWrapper().solve(obj_uncon, x0, bounds=bounds.T, maxfun=1000)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
+obj1 = set_funcs_mbdoe(x0)
+obj1_unc = lambda x: set_funcs_mbdoe(x)[0]
 
-obj1 = obj_MBDoE('E1')
-
-
-bounds = np.array([[0,1.],[0,1.],[0,1.],[0,1.]])
-x0 = np.array([0.1]*4)
-
-g1 = con_MBDoE
-
-soln1 = PyBobyqaWrapper().solve(obj1, x0, bounds=bounds.T,constraints=[g1], maxfun=1000)#pybobyqa.solve(f_pen, x0, bounds=bounds.T)
-
-
+print('unc: ', obj1_unc(x0))
+print('con :', obj1)
 print(2)
