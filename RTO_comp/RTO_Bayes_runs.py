@@ -54,9 +54,9 @@ def RTO_Noise(x, noise, N_SAA):
     
     plant = WO_system()
     
-    f = plant.WO_obj_sys_ca
-    g1 = plant.WO_con1_sys_ca
-    g2 = plant.WO_con2_sys_ca
+    f = plant.WO_obj_sys_ca_noise_less
+    g1 = plant.WO_con1_sys_ca_noise_less
+    g2 = plant.WO_con2_sys_ca_noise_less
     f_SAA = 0
     g1_SAA, g2_SAA = - np.inf, - np.inf
     
@@ -72,7 +72,7 @@ bounds  = np.array([[4., 7.], [70., 100.]])
 
 # max_f_eval = 100
 # max_it = 50
-nbr_feval = 50
+nbr_feval = 30
 
 N = 10
 RTO_Bayes_list = []
@@ -158,6 +158,7 @@ with open('BayesRTO_listNoiseConv.pickle', 'wb') as handle:
 with open('BayesRTO_listNoiseConstr.pickle', 'wb') as handle:
     pickle.dump(RTOconstraint_list_Bayes, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
+nbr_feval = 25
 
 N_SAA = 2
 N_samples = 20
