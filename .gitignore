@@ -8,3 +8,8 @@ algorithms/simplex/__pycache__/simplex_method.cpython-38.pyc
 =======
 .idea/workspace.xml
 >>>>>>> remotes/origin/PyBobyqa-wrapper
+BBO HYSYS/superstructure_link.py
+BBO HYSYS/superstructure_options.PRF
+BBO HYSYS/superstructure.bk0
+BBO HYSYS/superstructure.hsc
+.DS_Store

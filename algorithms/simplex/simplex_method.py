@@ -62,6 +62,15 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
     g_best_so_far = np.zeros((max_iter,con_d))
     nbr_samples = np.zeros(max_iter)
 
+    for i in range(len(x_nodes)):
+        node = x_nodes[i,:]
+        for j in range(len(node)):
+            if node[j] < bounds[j,0]:
+                node[j] = bounds[j,0]
+            if node[j] > bounds[j,1]:
+                node[j] = bounds[j,1]
+        x_nodes[i,:] = node 
+            
 
     # evaluating function 
     for i in range(d+1):
@@ -71,7 +80,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
     
     for its in range(max_iter):
         
-        
+
         
         sorted_nodes = np.argsort(f_nodes[:,0])
         best_nodes = x_nodes[sorted_nodes[:-1]]
@@ -127,6 +136,14 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                 f_nodes[sorted_nodes[-1],:] = f_contracted
              
         nbr_samples[its] = f_eval_count
+        for i in range(len(x_nodes)):
+            node = x_nodes[i,:]
+            for j in range(len(node)):
+                if node[j] < bounds[j,0]:
+                    node[j] = bounds[j,0]
+                if node[j] > bounds[j,1]:
+                    node[j] = bounds[j,1]
+            x_nodes[i,:] = node 
         if f_eval_count >= max_f_eval:
             break
         
