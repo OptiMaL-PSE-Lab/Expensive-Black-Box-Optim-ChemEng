@@ -53,6 +53,7 @@ def nesterov_random(f,x0,bounds,max_iter,constraints, alpha = 0.001, mu = 0.001,
         f_eval_count += 1
             
         g = ((f_forw - f_back)/(2*mu))*B@u.T
+        # print(g)
         x = x - alpha * (g.T)[0,:]
         
         feas = np.product( (np.array(g_store[:(i+1)*3]) <= 0).astype(int), axis = 1)

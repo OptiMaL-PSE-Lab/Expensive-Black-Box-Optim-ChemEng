@@ -1,5 +1,5 @@
 import case_studies.MBDoE.utilities_leeds_pre as utilities
-import case_studies.MBDoE.Utilities_leeds as utilities1
+import case_studies.MBDoE.utilities_leeds as utilities1
 
 import case_studies.MBDoE.ut as ut
 import numpy as np

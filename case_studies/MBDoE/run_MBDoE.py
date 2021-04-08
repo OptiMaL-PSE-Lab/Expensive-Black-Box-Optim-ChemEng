@@ -20,6 +20,3 @@ x0 = np.array([0.1]*4)
 obj1 = set_funcs_mbdoe(x0)
 obj1_unc = lambda x: set_funcs_mbdoe(x)[0]
 
-print('unc: ', obj1_unc(x0))
-print('con :', obj1)
-print(2)
