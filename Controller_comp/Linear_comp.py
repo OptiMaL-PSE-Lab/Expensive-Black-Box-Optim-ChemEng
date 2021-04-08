@@ -147,33 +147,8 @@ for i in range(N):
     ContrLin_DIRECT_list.append(ContrLin_DIRECT)
 print('10 DIRECT iterations completed')     
 
-# with open('BayesContrLin_list.pickle', 'rb') as handle:
-#     ContrLin_Bayes_list = pickle.load(handle)
-
-N = 10
-ContrLin_Bayes_list = []
-for i in range(1):
-    Bayes = BayesOpt()
-    pyro.set_rng_seed(i)
-    
-    if i<3:
-        nbr_feval = 40
-    elif i<6:
-        nbr_feval = 30
-    else:
-        nbr_feval = 20
-    
-    phi_uncon = lambda x: phi(x)[0]
-    ContrLin_Bayes = Bayes.solve(phi_uncon, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=0, casadi=True, \
-                            maxfun = nbr_feval, ).output_dict
-    ContrLin_Bayes_list.append(ContrLin_Bayes)
-
-print('10 BayesOpt iterations completed')
-
-with open('BayesContrLin_list.pickle', 'wb') as handle:
-    pickle.dump(ContrLin_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+with open('BayesContrLin_list.pickle', 'rb') as handle:
+    ContrLin_Bayes_list = pickle.load(handle)
 
 
 x_best_pyBbyqa = np.array(ContrLin_pybobyqa['x_best_so_far'])

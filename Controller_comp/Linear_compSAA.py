@@ -172,32 +172,9 @@ for i in range(N):
 print('10 DIRECT iterations completed')     
 
 
-# with open('BayesContrLinSAA_list.pickle', 'rb') as handle:
-#     ContrLinSAA_Bayes_list = pickle.load(handle)
+with open('BayesContrLinSAA_list.pickle', 'rb') as handle:
+    ContrLinSAA_Bayes_list = pickle.load(handle)
 
-N = 10
-ContrLinSAA_Bayes_list = []
-for i in range(1):
-    Bayes = BayesOpt()
-    pyro.set_rng_seed(i)
-    
-    if i<3:
-        nbr_feval = 40
-    elif i<6:
-        nbr_feval = 30
-    else:
-        nbr_feval = 20
-        
-    phi_unconSAA = lambda x: phi_SAA(x)[0]
-    ContrLinSAA_Bayes = Bayes.solve(phi_unconSAA, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=0, casadi=True, \
-                            maxfun = nbr_feval, ).output_dict
-    ContrLinSAA_Bayes_list.append(ContrLinSAA_Bayes)
- 
-print('10 BayesOpt iterations completed')
-
-with open('BayesContrLinSAA_list.pickle', 'wb') as handle:
-    pickle.dump(ContrLinSAA_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 fig1 = plt.figure()

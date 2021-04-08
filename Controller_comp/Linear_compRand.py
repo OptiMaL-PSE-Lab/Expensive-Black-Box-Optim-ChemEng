@@ -165,32 +165,8 @@ for i in range(N):
 print('10 DIRECT iterations completed')     
 
 
-# with open('BayesContrLinRand_list.pickle', 'rb') as handle:
-#     ContrLinRand_Bayes_list = pickle.load(handle)
-
-N = 10
-ContrLinRand_Bayes_list = []
-for i in range(1):
-    Bayes = BayesOpt()
-    pyro.set_rng_seed(i)
-    
-    if i<3:
-        nbr_feval = 40
-    elif i<6:
-        nbr_feval = 30
-    else:
-        nbr_feval = 20
-        
-    phi_unconRand = lambda x: phi_rand(x)[0]
-    ContrLinRand_Bayes = Bayes.solve(phi_unconRand, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=0, casadi=True, \
-                            maxfun = 40, ).output_dict
-    ContrLinRand_Bayes_list.append(ContrLinRand_Bayes)
- 
-print('10 BayesOpt iterations completed')
-
-with open('BayesContrLinRand_list.pickle', 'wb') as handle:
-    pickle.dump(ContrLinRand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('BayesContrLinRand_list.pickle', 'rb') as handle:
+    ContrLinRand_Bayes_list = pickle.load(handle)
 
 
 fig1 = plt.figure()

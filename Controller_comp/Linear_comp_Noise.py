@@ -117,7 +117,7 @@ for i in range(n_noise):
     best_constr = []
     for j in range(N_samples):
         f = lambda x: phi_Noise(x, noise_mat[i], N_SAA)
-        sol = SQSnobFitWrapper().solve(phi_Noise, x0, bounds, \
+        sol = SQSnobFitWrapper().solve(f, x0, bounds, \
                                     maxfun = max_f_eval, constraints=1)
         best.append(sol['f_best_so_far'][-1])
     ContrLinNoise_list_SQSnobFit.append(best)

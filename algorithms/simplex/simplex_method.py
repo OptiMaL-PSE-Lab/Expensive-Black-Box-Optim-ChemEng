@@ -2,9 +2,18 @@ import numpy as np
 # import sys
 # sys.path.insert(1, 'utilities')
 from utilities.general_utility_functions import PenaltyFunctions
-    
+
+def project_to_bounds(x, bounds):
+    node = x
+    for j in range(len(x)):
+        if node[j] < bounds[j,0]:
+            node[j] = bounds[j,0]
+        if node[j] > bounds[j,1]:
+            node[j] = bounds[j,1]
+    return node
+
 def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
-                   mu_con = 1e3, rnd_seed = 0):
+                   mu_con = 1e3, rnd_seed = 0, initialisation = 0.1):
     '''
     INPUTS
     ------------------------------------
@@ -50,7 +59,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
     bounds = np.array(bounds)   # converting to numpy if not 
     d = len(x0)                 # dimension 
     con_d = constraints
-    f_range = (bounds[:,1] - bounds[:,0])*0.1       # range of initial simplex
+    f_range = (bounds[:,1] - bounds[:,0])*initialisation # range of initial simplex
     x_nodes = np.random.normal(x0,f_range,(d+1,d))  # creating nodes
     f_nodes = np.zeros((len(x_nodes[:,0]),1))       # function value at each node
     f_eval_count = 0            # initialising total function evaluation counter
@@ -64,12 +73,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
 
     for i in range(len(x_nodes)):
         node = x_nodes[i,:]
-        for j in range(len(node)):
-            if node[j] < bounds[j,0]:
-                node[j] = bounds[j,0]
-            if node[j] > bounds[j,1]:
-                node[j] = bounds[j,1]
-        x_nodes[i,:] = node 
+        x_nodes[i,:] = project_to_bounds(node, bounds) 
             
 
     # evaluating function 
@@ -108,7 +112,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
         # centroid of all bar worst nodes
         centroid = np.mean(best_nodes,axis=0)
         # reflection of worst node
-        x_reflected = centroid + (centroid - x_nodes[sorted_nodes[-1],:])
+        x_provis = centroid + (centroid - x_nodes[sorted_nodes[-1],:])
+        x_reflected = project_to_bounds(x_provis, bounds) 
         f_reflected =  f_aug.aug_obj(x_reflected) 
         f_eval_count += 1 
         # accept reflection? 
@@ -118,7 +123,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                 f_nodes[sorted_nodes[-1],:] = f_reflected
         # try expansion of reflected then accept? 
         elif f_reflected < f_nodes[sorted_nodes[0]]:
-                x_expanded = centroid + 2*(x_reflected-centroid)
+                x_provis =   centroid + 2*(x_reflected-centroid)
+                x_expanded = project_to_bounds(x_provis, bounds) 
                 f_expanded = f_aug.aug_obj(x_expanded)
                 f_eval_count += 1 
                 if f_expanded < f_reflected:
@@ -128,7 +134,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                     x_nodes[sorted_nodes[-1],:] = x_reflected
                     f_nodes[sorted_nodes[-1],:] = f_reflected
         else: # all else fails, contraction of worst internal of simplex
-            x_contracted = centroid + 0.5*(x_nodes[sorted_nodes[-1],:]-centroid)
+            x_provis = centroid + 0.5*(x_nodes[sorted_nodes[-1],:]-centroid) 
+            x_contracted = project_to_bounds(x_provis, bounds) 
             f_contracted = f_aug.aug_obj(x_contracted)
             f_eval_count += 1
             if f_contracted < f_nodes[sorted_nodes[-1]]:
@@ -136,14 +143,14 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                 f_nodes[sorted_nodes[-1],:] = f_contracted
              
         nbr_samples[its] = f_eval_count
-        for i in range(len(x_nodes)):
-            node = x_nodes[i,:]
-            for j in range(len(node)):
-                if node[j] < bounds[j,0]:
-                    node[j] = bounds[j,0]
-                if node[j] > bounds[j,1]:
-                    node[j] = bounds[j,1]
-            x_nodes[i,:] = node 
+        # for i in range(len(x_nodes)):
+        #     node = x_nodes[i,:]
+        #     for j in range(len(node)):
+        #         if node[j] < bounds[j,0]:
+        #             node[j] = bounds[j,0]
+        #         if node[j] > bounds[j,1]:
+        #             node[j] = bounds[j,1]
+        #     x_nodes[i,:] = node 
         if f_eval_count >= max_f_eval:
             break
         
