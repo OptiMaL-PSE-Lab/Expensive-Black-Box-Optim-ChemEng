@@ -128,8 +128,8 @@ noise_mat = np.zeros(n_noise)
 for i in range(n_noise):
     noise_mat[i] = 1/3*i
 
-bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
-x0 = np.array([-0.5,1.5])
+x0 = [6.9, 83]
+bounds  = np.array([[4., 7.], [70., 100.]])
 max_f_eval = 50 ; N_SAA = 1
 
  
@@ -141,8 +141,9 @@ for i in range(n_noise):
     print('Outer Iteration ', i+1, ' out of ', n_noise,' of BayesOpt')
     best = []
     best_constr = []
+    Bayes = BayesOpt()
+    f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
     for j in range(N_samples):
-        f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
         sol = Bayes.solve(f, x0, acquisition='EI',bounds=bounds.T, \
                             print_iteration = True, constraints=2, casadi=True, \
                             maxfun = nbr_feval, ).output_dict
