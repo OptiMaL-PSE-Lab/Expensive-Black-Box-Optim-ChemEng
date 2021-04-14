@@ -19,7 +19,7 @@ from case_studies.MBDoE.construct_MBDoE_funs import set_funcs_mbdoe
 bounds = np.array([[0,1.],[0,1.],[0,1.],[0,1.]])
 x0 = np.array([0.1]*4)
 
-cost = lambda x: set_funcs_mbdoe(x)
+cost_BO = lambda x: set_funcs_mbdoe(x)[0]
 
 nbr_feval = 30
 
@@ -29,8 +29,8 @@ for i in range(N):
     Bayes = BayesOpt()
     pyro.set_rng_seed(i)
     print('Iteration ', i+1, ' out of ', N)
-    MBDoE_Bayes = Bayes.solve(cost, x0, acquisition='EI',bounds=bounds.T, \
-                            print_iteration = True, constraints=2, casadi=True, \
+    MBDoE_Bayes = Bayes.solve(cost_BO, x0, acquisition='EI',bounds=bounds.T, \
+                            print_iteration = True, constraints=0, casadi=True, \
                             maxfun = nbr_feval, ).output_dict
     MBDoE_Bayes_list.append(MBDoE_Bayes)
 
