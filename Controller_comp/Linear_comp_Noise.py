@@ -70,11 +70,8 @@ for i in range(n_noise):
 x0 = np.array([4, 4, 4, 4])
 bounds = np.array([[0, 8], [0, 8], [0, 8], [0, 8]])
 
-max_f_eval = 100 ; N_SAA = 1
-# max_f_eval = 50 ; N_SAA = 2
-max_it = 100
 
-#CUATRO local, CUATRO global, simplex, DIRECT
+max_f_eval = 50 ; N_SAA = 1
 
 N_samples = 20
 ContrLinNoise_list_DIRECT = []
@@ -106,23 +103,21 @@ for i in range(n_noise):
         best.append(sol['f_best_so_far'][-1])
     ContrLinNoise_list_CUATROl.append(best)
     
-    
 # N_SAA = 1
 N_samples = 20
-ContrLinNoise_list_SQSnobFit = []
-init_radius = 2
+ContrLinNoise_list_simplex = []
 for i in range(n_noise):
-    print('Iteration ', i+1, ' of CUATRO_g')
+    print('Iteration ', i+1, ' of simplex')
     best = []
     best_constr = []
     for j in range(N_samples):
         f = lambda x: phi_Noise(x, noise_mat[i], N_SAA)
-        sol = SQSnobFitWrapper().solve(f, x0, bounds, \
-                                    maxfun = max_f_eval, constraints=1)
+        sol = simplex_method(f, x0, bounds, max_iter = 100, \
+                            constraints = 1, rnd_seed = j, max_f_eval= max_f_eval)
         best.append(sol['f_best_so_far'][-1])
-    ContrLinNoise_list_SQSnobFit.append(best)
+    ContrLinNoise_list_simplex.append(best)
     
-
+    
 
 noise = ['%.3f' % noise_mat[i] for i in range(n_noise)]
 noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
@@ -130,11 +125,11 @@ noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
 
 convergence = list(itertools.chain(*ContrLinNoise_list_DIRECT)) + \
               list(itertools.chain(*ContrLinNoise_list_CUATROl)) + \
-              list(itertools.chain(*ContrLinNoise_list_SQSnobFit))
+              list(itertools.chain(*ContrLinNoise_list_simplex))
               
 noise = list(itertools.chain(*noise_labels))*3
 method = ['DIRECT']*int(len(noise)/3) + ['CUATRO_l']*int(len(noise)/3) + \
-         ['SQSnobfit']*int(len(noise)/3)
+         ['Simplex']*int(len(noise)/3)
 
 data = {'Best function evaluation': convergence, \
         "Noise standard deviation": noise, \
@@ -143,14 +138,89 @@ df = pd.DataFrame(data)
 
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('Publication plots/SAA2feval25Convergence.svg', format = "svg")
+plt.savefig('Controller_publication_plots/feval50Convergence.svg', format = "svg")
 # ax.set_ylim([0.1, 10])
-# ax.set_yscale("log")
+# ax
 plt.show()
 plt.clf()
 
 
 
 
+max_f_eval = 25 ; N_SAA = 2
+max_it = 100
+
+#CUATRO local, CUATRO global, simplex, DIRECT
+
+N_samples = 20
+ContrLinNoiseSAA_list_DIRECT = []
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of DIRECT')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: phi_Noise(x, noise_mat[i], N_SAA)
+        ContrLinNoise_DIRECT_f = lambda x, grad: f(x)
+        sol = DIRECTWrapper().solve(ContrLinNoise_DIRECT_f, x0, bounds, \
+                                    maxfun = max_f_eval, constraints=1)
+        best.append(sol['f_best_so_far'][-1])
+    ContrLinNoiseSAA_list_DIRECT.append(best)
+
+# N_SAA = 1
+N_samples = 20
+ContrLinNoiseSAA_list_CUATROl = []
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of CUATRO_l')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: phi_Noise(x, noise_mat[i], N_SAA)
+        sol = CUATRO(f, x0, 1, bounds = bounds, max_f_eval = max_f_eval, \
+                          N_min_samples = 6, tolerance = 1e-10,\
+                          beta_red = 0.9, rnd = j, method = 'local', \
+                          constr_handling = 'Fitting')
+        best.append(sol['f_best_so_far'][-1])
+    ContrLinNoiseSAA_list_CUATROl.append(best)
+    
+# N_SAA = 1
+N_samples = 20
+ContrLinNoiseSAA_list_simplex = []
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of Simplex')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: phi_Noise(x, noise_mat[i], N_SAA)
+        sol = simplex_method(f, x0, bounds, max_iter = 100, \
+                            constraints = 1, rnd_seed = j, max_f_eval= max_f_eval)
+        best.append(sol['f_best_so_far'][-1])
+    ContrLinNoiseSAA_list_simplex.append(best)
+    
+    
+    
 
 
+noise = ['%.3f' % noise_mat[i] for i in range(n_noise)]
+noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
+
+
+convergence = list(itertools.chain(*ContrLinNoiseSAA_list_DIRECT)) + \
+              list(itertools.chain(*ContrLinNoiseSAA_list_CUATROl)) + \
+              list(itertools.chain(*ContrLinNoiseSAA_list_simplex))
+              
+noise = list(itertools.chain(*noise_labels))*3
+method = ['DIRECT']*int(len(noise)/3) + ['CUATRO_l']*int(len(noise)/3) + \
+         ['Simplex']*int(len(noise)/3)
+
+data = {'Best function evaluation': convergence, \
+        "Noise standard deviation": noise, \
+        'Method': method}
+df = pd.DataFrame(data)
+
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+plt.savefig('Controller_publication_plots/SAA2feval25Convergence.svg', format = "svg")
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.show()
+plt.clf()

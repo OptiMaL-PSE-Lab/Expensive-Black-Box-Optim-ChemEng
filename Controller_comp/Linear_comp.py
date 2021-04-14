@@ -299,7 +299,8 @@ sol_SQSF = average_from_list(ContrLin_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(ContrLin_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
-
+sol_BO = average_from_list(ContrLin_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
@@ -314,9 +315,9 @@ ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
-f_best = np.array(ContrLin_Bayes_list[0]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO', c = 'r')
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'red', alpha = .5)
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')

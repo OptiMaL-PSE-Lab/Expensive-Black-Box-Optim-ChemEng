@@ -223,7 +223,8 @@ for i in range(N):
     ContrSynRand_DIRECT_list.append(ContrSynRand_DIRECT)
 print('10 DIRECT iterations completed')    
 
-
+with open('BayesContrSynRand_list.pickle', 'rb') as handle:
+    ContrSynRand_Bayes_list = pickle.load(handle)
 
 
 
@@ -312,19 +313,19 @@ ax1.set_ylabel('Best function evaluation')
 ax1.set_yscale('log')
 fig1.savefig('ContrSyn_random_plots/ContrSyn_CUATROl_Convergence_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# for i in range(len(ContrSynRand_Bayes_list)):
-#     x_best = np.array(ContrSynRand_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(ContrSynRand_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(ContrSynRand_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax1.set_yscale('log')
-# fig1.savefig('ContrSyn_random_plots/ContrSyn_BO_Convergence_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+for i in range(len(ContrSynRand_Bayes_list)):
+    x_best = np.array(ContrSynRand_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(ContrSynRand_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(ContrSynRand_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax1.set_yscale('log')
+fig1.savefig('ContrSyn_random_plots/ContrSyn_BO_Convergence_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -402,6 +403,8 @@ sol_BFGS = average_from_list(ContrSynRand_BFGS_list)
 test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
 sol_Adam = average_from_list(ContrSynRand_Adam_list)
 test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
+sol_BO = average_from_list(ContrSynRand_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 
 
@@ -419,7 +422,9 @@ ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
-## BO placeholder: red
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'red', alpha = .5)
 
 ax.legend()
 ax.set_yscale('log')
