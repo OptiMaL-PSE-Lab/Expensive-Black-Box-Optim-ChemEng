@@ -145,14 +145,14 @@ def phi_rand(pi, x0 = [15, 15], xref = [10, 10], N=200, T=3, deviation = 1, \
     """This function takes an array of k values stored in an nd array pi and returns the value of phi associated
         with each of the triplets of k within pi."""
     if type(pi) == list:
-        phi_sol, system_response, control_out = integrator_functionRand(pi, x0, xref, N, T)
+        phi_sol, system_response, control_out = integrator_functionRand(pi, x0, xref, N, T, deviation = deviation)
     elif isinstance(pi, np.ndarray):
         if pi.ndim == 1:
-            phi_sol, system_response, control_out = integrator_functionRand(pi.tolist(), x0, xref, N, T)
+            phi_sol, system_response, control_out = integrator_functionRand(pi.tolist(), x0, xref, N, T, deviation = deviation)
         else:
             # pi = pi.reshape(3,).tolist()
             pi = pi.reshape(4,).tolist()
-            phi_sol, system_response, control_out = integrator_functionRand(pi, x0, xref, N, T)
+            phi_sol, system_response, control_out = integrator_functionRand(pi, x0, xref, N, T, deviation = deviation)
     else:
         raise ValueError("Pi must be a list of 3 floats or an nd.array of shape (3,)")
         

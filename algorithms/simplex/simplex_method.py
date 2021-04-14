@@ -158,8 +158,8 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
             f_contracted = f_aug.aug_obj(x_contracted)
 
             # adding hypothesised function eval (have to re-eval to get f,g separate?)
-            f_total_func = f_aug.f(x_expanded)
-            x_store = np.append(x_store,[x_expanded],axis=0)
+            f_total_func = f_aug.f(x_contracted)
+            x_store = np.append(x_store,[x_contracted],axis=0)
             f_store = np.append(f_store,f_total_func[0])
             g_store = np.append(g_store,[f_total_func[1]],axis=0)
 
