@@ -89,12 +89,18 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
         sorted_nodes = np.argsort(f_nodes[:,0])
         best_nodes = x_nodes[sorted_nodes[:-1]]
         
-        # storing important quantities
         best_node = x_nodes[sorted_nodes[0]]
-        x_store[its,:] = best_node
         f_evalled = f_aug.f(best_node)
-        f_store[its] = f_evalled[0]
-        g_store[its,:] = f_evalled[1]
+        # storing important quantities
+        if its == 0:
+            x_store = [best_node]
+            f_store = [f_evalled[0]]
+            g_store = [f_evalled[1]]
+        else:
+            x_store = np.append(x_store,[best_node],axis=0)
+            f_store = np.append(f_store,f_evalled[0])
+            g_store = np.append(g_store,[f_evalled[1]],axis=0)
+
         
         if its == 0:
             f_best_so_far[its] = f_store[its] 
@@ -115,6 +121,12 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
         x_provis = centroid + (centroid - x_nodes[sorted_nodes[-1],:])
         x_reflected = project_to_bounds(x_provis, bounds) 
         f_reflected =  f_aug.aug_obj(x_reflected) 
+        # adding hypothesised function eval (have to re-eval to get f,g separate?)
+        f_total_func = f_aug.f(x_reflected)
+        x_store = np.append(x_store,[x_reflected],axis=0)
+        f_store = np.append(f_store,f_total_func[0])
+        g_store = np.append(g_store,[f_total_func[1]],axis=0)
+
         f_eval_count += 1 
         # accept reflection? 
         if f_reflected < f_nodes[sorted_nodes[-2]] and \
@@ -126,6 +138,13 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                 x_provis =   centroid + 2*(x_reflected-centroid)
                 x_expanded = project_to_bounds(x_provis, bounds) 
                 f_expanded = f_aug.aug_obj(x_expanded)
+
+                # adding hypothesised function eval (have to re-eval to get f,g separate?)
+                f_total_func = f_aug.f(x_expanded)
+                x_store = np.append(x_store,[x_expanded],axis=0)
+                f_store = np.append(f_store,f_total_func[0])
+                g_store = np.append(g_store,[f_total_func[1]],axis=0)
+
                 f_eval_count += 1 
                 if f_expanded < f_reflected:
                     x_nodes[sorted_nodes[-1],:] = x_expanded
@@ -137,6 +156,13 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
             x_provis = centroid + 0.5*(x_nodes[sorted_nodes[-1],:]-centroid) 
             x_contracted = project_to_bounds(x_provis, bounds) 
             f_contracted = f_aug.aug_obj(x_contracted)
+
+            # adding hypothesised function eval (have to re-eval to get f,g separate?)
+            f_total_func = f_aug.f(x_expanded)
+            x_store = np.append(x_store,[x_expanded],axis=0)
+            f_store = np.append(f_store,f_total_func[0])
+            g_store = np.append(g_store,[f_total_func[1]],axis=0)
+
             f_eval_count += 1
             if f_contracted < f_nodes[sorted_nodes[-1]]:
                 x_nodes[sorted_nodes[-1],:] = x_contracted
@@ -156,9 +182,9 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
         
    # computing final constraint violation 
     output_dict = {}
-    output_dict['g_store'] = g_store[:its+1]
-    output_dict['x_store'] = x_store[:its+1]
-    output_dict['f_store'] = f_store[:its+1]
+    output_dict['g_store'] = g_store
+    output_dict['x_store'] = x_store
+    output_dict['f_store'] = f_store
     output_dict['g_best_so_far'] = g_best_so_far[:its+1]
     output_dict['x_best_so_far'] = x_best_so_far[:its+1]
     output_dict['f_best_so_far'] = f_best_so_far[:its+1]
