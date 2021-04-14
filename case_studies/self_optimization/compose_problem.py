@@ -38,9 +38,9 @@ xo       = np.array([0.0,0.85])#np.array([0.0,0.05])
 
 
 print('self_opt: ', self_opt([0,0.85]))
-print('self_opt_end_point_constraint', self_opt_end_point_constraint([0,0.85]))
-print('self_opt_end_point_constraint_noiseless', self_opt_end_point_constraint_noiseless([0,0.85]))
-print('self_opt_noiseless', self_opt_noiseless([0,0.85]))
+print('self_opt_end_point_constraint: ', self_opt_end_point_constraint([0,0.85]))
+print('self_opt_end_point_constraint_noiseless: ', self_opt_end_point_constraint_noiseless([0,0.85]))
+print('self_opt_noiseless: ', self_opt_noiseless([0,0.85]))
 
 print(2)
 
