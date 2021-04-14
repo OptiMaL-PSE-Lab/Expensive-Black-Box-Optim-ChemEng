@@ -80,24 +80,24 @@ bounds  = np.array([[4., 7.], [70., 100.]])
 max_f_eval = 25 ; N_SAA = 2
 max_it = 100
 
-#CUATRO local, CUATRO global, simplex, DIRECT
+#CUATRO local, CUATRO global, SQSnobFit, Bayes
 
 N_samples = 20
-RTONoise_list_splx = []
-RTOConstraint_list_splx = []
+RTONoise_list_SQSF = []
+RTOConstraint_list_SQSF = []
 for i in range(n_noise):
-    print('Iteration ', i+1, ' of Simplex')
+    print('Iteration ', i+1, ' of SQSnobfit')
     best = []
     best_constr = []
     for j in range(N_samples):
         f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
-        sol = simplex_method(f, x0, bounds, max_iter = max_it, \
-                            constraints = 2, rnd_seed = j)
+        sol = SQSnobFitWrapper().solve(f, x0, bounds, mu_con = 1e6, \
+                                    maxfun = max_f_eval, constraints=2)
         best.append(sol['f_best_so_far'][-1])
         _, g = RTO_Noise(sol['x_best_so_far'][-1], 0, N_SAA)
         best_constr.append(np.sum(np.maximum(g, 0)))
-    RTONoise_list_splx.append(best)
-    RTOConstraint_list_splx.append(best_constr)
+    RTONoise_list_SQSF.append(best)
+    RTOConstraint_list_SQSF.append(best_constr)
 
 # N_SAA = 1
 N_samples = 20
@@ -142,22 +142,30 @@ for i in range(n_noise):
     RTOConstraint_list_CUATROg.append(best_constr)
     
 
+with open('BayesRTO_listNoiseConv.pickle', 'rb') as handle:
+    RTONoise_list_Bayes = pickle.load(handle)
+    
+with open('BayesRTO_listNoiseConstr.pickle', 'rb') as handle:
+    RTOConstraint_list_Bayes = pickle.load(handle)
+
 
 noise = ['%.3f' % noise_mat[i] for i in range(n_noise)]
 noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
 
 
-convergence = list(itertools.chain(*RTONoise_list_splx)) + \
+convergence = list(itertools.chain(*RTONoise_list_SQSF)) + \
               list(itertools.chain(*RTONoise_list_CUATROl)) + \
-              list(itertools.chain(*RTONoise_list_CUATROg))
+              list(itertools.chain(*RTONoise_list_CUATROg)) + \
+              list(itertools.chain(*RTONoise_list_Bayes))    
               
-constraints = list(itertools.chain(*RTOConstraint_list_splx)) + \
+constraints = list(itertools.chain(*RTOConstraint_list_SQSF)) + \
               list(itertools.chain(*RTOConstraint_list_CUATROl)) + \
-              list(itertools.chain(*RTOConstraint_list_CUATROg))
+              list(itertools.chain(*RTOConstraint_list_CUATROg)) + \
+              list(itertools.chain(*RTOConstraint_list_Bayes))   
               
-noise = list(itertools.chain(*noise_labels))*3
-method = ['Simplex']*int(len(noise)/3) + ['CUATRO_l']*int(len(noise)/3) + \
-         ['CUATRO_g']*int(len(noise)/3)
+noise = list(itertools.chain(*noise_labels))*4
+method = ['SQSnobfit']*int(len(noise)/4) + ['CUATRO_l']*int(len(noise)/4) + \
+         ['CUATRO_g']*int(len(noise)/4) + ['Bayes Opt.']*int(len(noise)/4)
 
 data = {'Best function evaluation': convergence, \
         "Constraint violation": constraints, \
@@ -165,6 +173,14 @@ data = {'Best function evaluation': convergence, \
         'Method': method}
 df = pd.DataFrame(data)
 
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
 plt.savefig('Publication plots/SAA2feval25Convergence.svg', format = "svg")
@@ -175,8 +191,10 @@ plt.clf()
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", fliersize = 0)
+
 ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", dodge = True)
+
 plt.savefig('Publication plots/SAA2feval25Constraints.svg', format = "svg")
 
 

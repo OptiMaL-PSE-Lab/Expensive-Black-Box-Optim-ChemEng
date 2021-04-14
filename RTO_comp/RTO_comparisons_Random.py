@@ -196,30 +196,6 @@ with open('BayesRTO_listRand.pickle', 'rb') as handle:
     RTORand_Bayes_list = pickle.load(handle)
 
 
-# N = 10
-# RTORand_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-#     RTORand_Bayes = Bayes.solve(RTO_rand, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints=2, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     RTORand_Bayes_list.append(RTORand_Bayes)
- 
-# print('10 BayesOpt iterations completed')
-
-# with open('BayesRTO_listRand.pickle', 'wb') as handle:
-#     pickle.dump(RTORand_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
 plant = WO_system()
 
 x = np.linspace(4, 7, 50)
@@ -234,6 +210,15 @@ for i in range(len(x)):
         Z[j][i] = plant.WO_obj_sys_ca_noise_less([x[i], y[j]])
         g1[j][i] = plant.WO_con1_sys_ca_noise_less([x[i], y[j]])
         g2[j][i] = plant.WO_con2_sys_ca_noise_less([x[i], y[j]])
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -476,6 +461,8 @@ test_findiff, test_av_findiff, test_min_findiff, test_max_findiff = sol_findiff
 # test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
 sol_Adam = average_from_list(RTORand_Adam_list)
 test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
+sol_BO = average_from_list(RTORand_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 
 
@@ -493,9 +480,10 @@ ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
-f_best = np.array(RTORand_Bayes_list[0]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5)
 
 ax.legend()
 # ax.set_yscale('log')

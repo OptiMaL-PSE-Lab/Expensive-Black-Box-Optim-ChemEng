@@ -164,28 +164,14 @@ print('10 DIRECT iterations completed')
 with open('BayesRTO_list.pickle', 'rb') as handle:
     RTO_Bayes_list = pickle.load(handle)
 
-# N = 10
-# RTO_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-    # RTO_Bayes = Bayes.solve(RTO, x0, acquisition='EI',bounds=bounds.T, \
-    #                         print_iteration = True, constraints=2, casadi=True, \
-    #                         maxfun = nbr_feval, ).output_dict
-#     RTO_Bayes_list.append(RTO_Bayes)
- 
-# print('10 BayesOpt iterations completed')
 
-# with open('BayesRTO_list.pickle', 'wb') as handle:
-#     pickle.dump(RTO_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 
 plant = WO_system()
@@ -421,6 +407,8 @@ sol_SQSF = average_from_list(RTO_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(RTO_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+sol_BO = average_from_list(RTO_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 
 fig = plt.figure()
@@ -436,9 +424,10 @@ ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
-f_best = np.array(RTO_Bayes_list[0]['f_best_so_far'])
-ax.step(np.arange(len(f_best)), f_best, where = 'post', \
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5)
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
