@@ -146,7 +146,7 @@ with open('BayesQuadratic_listNoiseConv.pickle', 'wb') as handle:
     
 with open('BayesQuadratic_listNoiseConstr.pickle', 'wb') as handle:
     pickle.dump(quadraticConstraint_list_Bayes, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
+
 
 N_SAA = 2
 nbr_feval = 25
