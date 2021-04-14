@@ -98,6 +98,7 @@ def Problem_rosenbrock(x):
     return f1(x), [g1(x), g2(x)]
 
 bounds = np.array([[-1.5,1.5],[-1.5,1.5]])
+bounds_DIRECT = np.array([[-1.5, 1], [-1, 1.5]])
 x0 = np.array([-0.5,1.5])
 
 max_f_eval = 100
@@ -106,7 +107,7 @@ max_it = 50
 
 RB_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2)
-max_f_eval = 100
+
 N = 10
 RB_Nest_list = []
 for i in range(N):
@@ -176,7 +177,7 @@ N = 10
 RB_DIRECT_list = []
 RB_DIRECT_f = lambda x, grad: Problem_rosenbrock(x)
 for i in range(N):
-    RB_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_f, x0, bounds, \
+    RB_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_f, x0, bounds_DIRECT, \
                                    maxfun = max_f_eval, constraints=2)
     RB_DIRECT_list.append(RB_DIRECT)
 print('10 DIRECT iterations completed')     
@@ -203,6 +204,15 @@ x_ind_BFGS = np.array(RB_BFGS['samples_at_iteration'])
 x_best_Adam = np.array(RB_Adam['x_best_so_far'])
 f_best_Adam = np.array(RB_Adam['f_best_so_far'])
 x_ind_Adam = np.array(RB_Adam['samples_at_iteration'])
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -295,10 +305,10 @@ for i in range(len(RB_Bayes_list)):
     f_best = np.array(RB_Bayes_list[i]['f_best_so_far'])
     nbr_feval = len(RB_Bayes_list[i]['f_store'])
     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+          label = 'BO'+str(i))
     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-ax1.legend()
+          label = 'BO'+str(i))
+ax1.legend(loc = 'upper right')
 ax1.set_yscale('log')
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
@@ -466,6 +476,169 @@ ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
 ax.set_xlim([0, 99])
 fig.savefig('Publication plots format/NotSoPromisingMethods.svg', format = "svg")
+
+
+def method_convergence(ax, sol, label, col):
+    x_best = np.array(sol['x_best_so_far'])
+    x_all = np.array(sol['x_store'])
+    
+    ax.scatter(x_all[:,0], x_all[:,1], color= col, s = 10, alpha=.5)
+    ax.plot(x_best[:,0], x_best[:,1], label = label + str(' best'), color= col, \
+            markersize = 5, alpha=.7, marker='o', linewidth = 2)
+    # ax.scatter(x_best[-1,0], x_best[-1,1], color='#255E69', alpha= 1)
+    
+    return ax
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_CUATRO_local_list[-1], 'CUATRO_l', '#AA4339')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_CUATRO_global_list[-1], 'CUATRO_g', 'green')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_pybobyqa, 'PyBOBYQA', 'orange')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_Adam, 'Adam', 'grey')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_BFGS, 'BFGS', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_simplex_list[2], 'Simplex', 'brown')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_DIRECT_list[-1], 'DIRECT', '#7B9F35')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+  
+
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_DIRECT_list[-1], 'DIRECT', 'orange')
+ax = method_convergence(ax, RB_CUATRO_global_list[-1], 'CUATRO_g', 'green')
+ax = method_convergence(ax, RB_CUATRO_local_list[-1], 'CUATRO_l', '#AA4339')
+ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+
+ax, fig = trust_fig(oracle, bounds)
+# ax = method_convergence(ax, RB_DIRECT_list[-1], 'DIRECT', 'orange')
+ax = method_convergence(ax, RB_CUATRO_global_list[-1], 'CUATRO_g', 'green')
+ax = method_convergence(ax, RB_CUATRO_local_list[-1], 'CUATRO_l', '#AA4339')
+ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_DIRECT_list[-1], 'DIRECT', 'orange')
+ax = method_convergence(ax, RB_CUATRO_global_list[-1], 'CUATRO_g', 'green')
+# ax = method_convergence(ax, RB_CUATRO_local_list[-1], 'CUATRO_l', '#AA4339')
+# ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+# ax = method_convergence(ax, RB_DIRECT_list[-1], 'DIRECT', 'orange')
+ax = method_convergence(ax, RB_CUATRO_global_list[-1], 'CUATRO_g', 'green')
+# ax = method_convergence(ax, RB_CUATRO_local_list[-1], 'CUATRO_l', '#AA4339')
+# ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+plt.show()
+plt.clf()
+
+
+
+
 
 
 

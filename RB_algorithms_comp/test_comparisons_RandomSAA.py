@@ -213,7 +213,13 @@ with open('BayesRB_listRandSAA.pickle', 'rb') as handle:
     RBSAA_Bayes_list = pickle.load(handle)
 
 
-
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 f_RB = lambda x, y: (1 - x)**2 + 100*(y - x**2)**2
 g1_RB = lambda x, y: (x-1)**3 - y + 1 <= 0

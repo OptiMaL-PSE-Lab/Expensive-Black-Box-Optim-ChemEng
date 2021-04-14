@@ -252,6 +252,13 @@ data = {'Best function evaluation': convergence, \
         'Method': method}
 df = pd.DataFrame(data)
 
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
 plt.savefig('Publication plots format/feval100Convergence.svg', format = "svg")
