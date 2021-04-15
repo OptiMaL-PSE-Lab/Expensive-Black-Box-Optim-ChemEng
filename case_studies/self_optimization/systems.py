@@ -148,14 +148,14 @@ class Static_PDE_reaction_system:
 
         return solver
 
-    def objective(self, u, initial_sol=np.array([0.])):
+    def objective(self, u, noise = 0.001, initial_sol=np.array([0.])):
         u_new = u*(self.umax-self.umin) + self.umin
         if initial_sol.all()==np.array([0.]):
             inintial = np.array([*np.zeros([self.N * 5])+0.1,*np.array([u_new[0]] * self.N)])
         else:
             inintial = initial_sol
 
-        x = self.eval(inintial, u_new)+ 0.001*np.random.randn(inintial.shape[0])
+        x = self.eval(inintial, u_new)+ noise*np.random.randn(inintial.shape[0])
         obj = -log(x[self.N*2-1])# + 0.5 * np.random.normal(0., 1)
 
         return obj.toarray()[0,0]
@@ -209,7 +209,7 @@ class Static_PDE_reaction_system:
 
         return pcon1.toarray()[0,0]
 
-    def constraint_agg_1(self, u, initial_sol=np.array([0.])):
+    def constraint_agg_1(self, u, noise = 0.01, initial_sol=np.array([0.])):
         u_new = u*(self.umax-self.umin) + self.umin
         if initial_sol.all()==np.array([0.]):
             inintial = np.array([*np.zeros([self.N * 5])+0.1,*np.array([u_new[0]] * self.N)])
@@ -217,7 +217,7 @@ class Static_PDE_reaction_system:
             inintial = initial_sol
 
         x = self.eval(inintial, u_new)
-        con  = x[3*self.N:4*self.N]/0.025-1 + 0.01*np.random.randn(self.N)
+        con  = x[3*self.N:4*self.N]/0.025-1 + noise*np.random.randn(self.N)
         rho  = 200
         gmax = np.max(con)
 
