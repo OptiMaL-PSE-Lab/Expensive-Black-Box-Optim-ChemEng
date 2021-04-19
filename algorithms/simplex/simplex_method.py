@@ -91,6 +91,7 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
         
         best_node = x_nodes[sorted_nodes[0]]
         f_evalled = f_aug.f(best_node)
+        f_eval_count += 1
         # storing important quantities
         if its == 0:
             x_store = [best_node]
