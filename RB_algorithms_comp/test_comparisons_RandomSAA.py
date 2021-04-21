@@ -88,9 +88,23 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
-def Problem_rosenbrock(x):
-    N_SAA = 10
+def Problem_rosenbrockSAA(x):
+    N_SAA = 5
     f_SAA = 0
     g_SAA1, g_SAA2 = - np.inf, -np.inf
     f1 = rosenbrock_constrained.rosenbrock_f
@@ -110,12 +124,15 @@ x0 = np.array([-0.5,1.5])
 max_f_eval = 100
 max_it = 50
 
+initial_outputSAA = Problem_rosenbrockSAA(x0)
+
 N = 10
 RBSAA_pybbqa_list = []
 for i in range(N):
-    RBSAA_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, \
+    RBSAA_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrockSAA, x0, bounds=bounds.T, \
                                               maxfun= max_f_eval, constraints=2, \
-                                              seek_global_minimum = True)
+                                              seek_global_minimum = True, \
+                                              objfun_has_noise= True)
     RBSAA_pybbqa_list.append(RBSAA_pybobyqa)   
 print('10 Py-BOBYQA iterations completed')
 
@@ -123,7 +140,7 @@ N = 10
 RBSAA_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    RBSAA_Nest = nesterov_random(Problem_rosenbrock, x0, bounds, max_iter = 50, \
+    RBSAA_Nest = nesterov_random(Problem_rosenbrockSAA, x0, bounds, max_iter = 50, \
                           constraints = 2, rnd_seed = i, alpha = 1e-4)
     RBSAA_Nest_list.append(RBSAA_Nest)
 print('10 Nesterov iterations completed')
@@ -132,7 +149,7 @@ N = 10
 RBSAA_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    RBSAA_simplex = simplex_method(Problem_rosenbrock, x0, bounds, max_iter = 50, \
+    RBSAA_simplex = simplex_method(Problem_rosenbrockSAA, x0, bounds, max_iter = 50, \
                             constraints = 2, rnd_seed = i)
     RBSAA_simplex_list.append(RBSAA_simplex)
 print('10 simplex iterations completed')
@@ -140,7 +157,7 @@ print('10 simplex iterations completed')
 N = 10
 RBSAA_findiff_list = []
 for i in range(N):
-    RBSAA_FiniteDiff = finite_Diff_Newton(Problem_rosenbrock, x0, bounds = bounds, \
+    RBSAA_FiniteDiff = finite_Diff_Newton(Problem_rosenbrockSAA, x0, bounds = bounds, \
                                    con_weight = 100)
     RBSAA_findiff_list.append(RBSAA_FiniteDiff)
 print('10 Approx Newton iterations completed')
@@ -148,7 +165,7 @@ print('10 Approx Newton iterations completed')
 N = 10
 RBSAA_BFGS_list = []
 for i in range(N):
-    RBSAA_BFGS = BFGS_optimizer(Problem_rosenbrock, x0, bounds = bounds, \
+    RBSAA_BFGS = BFGS_optimizer(Problem_rosenbrockSAA, x0, bounds = bounds, \
                          con_weight = 100)
     RBSAA_BFGS_list.append(RBSAA_BFGS)
 print('10 BFGS iterations completed')
@@ -156,7 +173,7 @@ print('10 BFGS iterations completed')
 N = 10
 RBSAA_Adam_list = []
 for i in range(N):
-    RBSAA_Adam = Adam_optimizer(Problem_rosenbrock, x0, method = 'forward', \
+    RBSAA_Adam = Adam_optimizer(Problem_rosenbrockSAA, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
                                       max_f_eval = 100, con_weight = 100)
@@ -170,7 +187,7 @@ N = 10
 RBSAA_CUATRO_global_list = []
 for i in range(N):
     rnd_seed = i
-    RBSAA_CUATRO_global = CUATRO(Problem_rosenbrock, x0, init_radius, bounds = bounds, \
+    RBSAA_CUATRO_global = CUATRO(Problem_rosenbrockSAA, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'global', \
                           constr_handling = method)
@@ -184,7 +201,7 @@ N = 10
 RBSAA_CUATRO_local_list = []
 for i in range(N):
     rnd_seed = i
-    RBSAA_CUATRO_local = CUATRO(Problem_rosenbrock, x0, init_radius, bounds = bounds, \
+    RBSAA_CUATRO_local = CUATRO(Problem_rosenbrockSAA, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'local', \
                           constr_handling = method)
@@ -194,7 +211,7 @@ print('10 CUATRO local iterations completed')
 N = 10
 RBSAA_SQSnobFit_list = []
 for i in range(N):
-    RBSAA_SQSnobFit = SQSnobFitWrapper().solve(Problem_rosenbrock, x0, bounds, \
+    RBSAA_SQSnobFit = SQSnobFitWrapper().solve(Problem_rosenbrockSAA, x0, bounds, \
                                    maxfun = max_f_eval, constraints=2)
     RBSAA_SQSnobFit_list.append(RBSAA_SQSnobFit)
 print('10 SnobFit iterations completed') 
@@ -202,9 +219,9 @@ print('10 SnobFit iterations completed')
 N = 10
 boundsDIR = np.array([[-1.5,1],[-1,1.5]])
 RBSAA_DIRECT_list = []
-RB_DIRECT_f = lambda x, grad: Problem_rosenbrock(x)
+RB_DIRECT_fSAA = lambda x, grad: Problem_rosenbrockSAA(x)
 for i in range(N):
-    RBSAA_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_f, x0, boundsDIR, \
+    RBSAA_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_fSAA, x0, boundsDIR, \
                                    maxfun = max_f_eval, constraints=2)
     RBSAA_DIRECT_list.append(RBSAA_DIRECT)
 print('10 DIRECT iterations completed')  
@@ -212,6 +229,7 @@ print('10 DIRECT iterations completed')
 with open('BayesRB_listRandSAA.pickle', 'rb') as handle:
     RBSAA_Bayes_list = pickle.load(handle)
 
+RBSAA_Bayes_list = fix_starting_points(RBSAA_Bayes_list, x0, initial_outputSAA)
 
 plt.rcParams["font.family"] = "Times New Roman"
 ft = int(15)
@@ -246,8 +264,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_Pybbqa_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_Pybbqa_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_Pybbqa_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_Pybbqa_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -268,8 +286,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_Newton_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_Newton_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_Newton_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_Newton_2Dspace_plot.svg', format = "svg")
 
 
 fig1 = plt.figure()
@@ -291,8 +309,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_BFGS_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_BFGS_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_BFGS_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_BFGS_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -313,8 +331,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_Adam_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_Adam_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_Adam_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_Adam_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -335,8 +353,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_CUATROg_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_CUATROg_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_CUATROg_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_CUATROg_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -357,8 +375,8 @@ ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_CUATROl_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_CUATROl_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_CUATROl_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_CUATROl_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -373,11 +391,15 @@ for i in range(len(RBSAA_Bayes_list)):
           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
 ax1.legend()
 ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.legend()
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_BO_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_BO_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_BO_2Dspace_plot.svg', format = "svg")
     
 
 fig1 = plt.figure()
@@ -398,8 +420,8 @@ ax2.set_ylabel('$x_2$')
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 ax2.legend()
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_Simplex_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_Simplex_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_Simplex_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_Simplex_2Dspace_plot.svg', format = "svg")
 
 
 ## Change to x_best_So_far
@@ -421,8 +443,8 @@ ax2.set_ylabel('$x_2$')
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 ax2.legend()
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_Nest_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_Nest_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_Nest_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_Nest_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -442,8 +464,8 @@ ax2.set_ylabel('$x_2$')
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 ax2.legend()
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_SQSnobFit_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_SQSnobFit_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_SQSnobFit_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_SQSnobFit_2Dspace_plot.svg', format = "svg")
 
 ## Change to x_best_So_far
 fig1 = plt.figure()
@@ -464,8 +486,8 @@ ax2.set_ylabel('$x_2$')
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 ax2.legend()
-fig1.savefig('RB_plots_RandomSAA/RBSAA10_DIRECT_Convergence_plot.svg', format = "svg")
-fig2.savefig('RB_plots_RandomSAA/RBSAA10_DIRECT_2Dspace_plot.svg', format = "svg")
+fig1.savefig('RB_plots_RandomSAA/RBSAA5_DIRECT_Convergence_plot.svg', format = "svg")
+fig2.savefig('RB_plots_RandomSAA/RBSAA5_DIRECT_2Dspace_plot.svg', format = "svg")
 
 
 sol_Cg = average_from_list(RBSAA_CUATRO_global_list)
@@ -495,54 +517,55 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'green', alpha = .5)
+                test_max_pybbqa, color = 'green', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 f_best = np.array(RBSAA_Bayes_list[0]['f_best_so_far'])
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
-
-
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])    
-fig.savefig('Publication plots format/SAA10PromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])    
+fig.savefig('Publication plots format/RBSAA5_Model.svg', format = "svg")
     
 
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
 ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+                test_max_Nest, color = 'brown', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
-                test_max_findiff, color = 'grey', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+                test_max_findiff, color = 'grey', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'BFGS', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_BFGS, \
-                test_max_BFGS, color = 'orange', alpha = .5)
+                test_max_BFGS, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
 ax.fill_between(np.arange(1, 101), test_min_Adam, \
-                test_max_Adam, color = 'blue', alpha = .5)
+                test_max_Adam, color = 'blue', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 
-
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots format/SAA10NotSoPromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])
+fig.savefig('Publication plots format/RBSAA5_Others.svg', format = "svg")
 
 

@@ -150,7 +150,8 @@ for i in range(n_noise):
         f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
         sol = PyBobyqaWrapper().solve(f, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2, \
-                                      seek_global_minimum = True)
+                                      seek_global_minimum = True, \
+                                      objfun_has_noise = True)
         best.append(sol['f_best_so_far'][-1])
         _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
         best_constr.append(np.sum(np.maximum(g, 0)))
@@ -252,16 +253,34 @@ data = {'Best function evaluation': convergence, \
         'Method': method}
 df = pd.DataFrame(data)
 
+
 plt.rcParams["font.family"] = "Times New Roman"
 ft = int(15)
 font = {'size': ft}
 plt.rc('font', **font)
 params = {'legend.fontsize': 12.5,
-              'legend.handlelength': 2}
+              'legend.handlelength': 1.2}
 plt.rcParams.update(params)
 
+
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('Publication plots format/feval100Convergence.svg', format = "svg")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.legend([])
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_feval100Convergence.svg', format = "svg")
+plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.clf()
+
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+# plt.legend([])
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=3)
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_feval100ConvergenceWithLabel.svg', format = "svg")
 plt.show()
 # ax.set_ylim([0.1, 10])
 # ax.set_yscale("log")
@@ -271,36 +290,174 @@ ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", fliersize = 0)
 ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", dodge = True)
-plt.savefig('Publication plots format/feval100Constraints.svg', format = "svg")
+plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_feval100Constraints.svg', format = "svg")
+plt.show()
+plt.clf()
 
 
-### Plots
+max_f_eval = 50 ; N_SAA = 2
+max_it = 100
 
-# f_RB = lambda x, y: (1 - x)**2 + 100*(y - x**2)**2
-# g1_RB = lambda x, y: (x-1)**3 - y + 1 <= 0
-# g2_RB = lambda x, y: x + y - 1.8 <= 0
 
-# oracle = RB(f_RB, ineq = [g1_RB, g2_RB])
+N_samples = 20
+RBnoiseSAA_list_pybbqa = []
+RBconstraintSAA_list_pybbqa = []
+for i in range(n_noise):
+    print('Iteration ', i, ' of Py-BOBYQA')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
+        sol = PyBobyqaWrapper().solve(f, x0, bounds=bounds.T, \
+                                      maxfun= max_f_eval, constraints=2, \
+                                      seek_global_minimum = True, \
+                                      objfun_has_noise = True)
+        best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoiseSAA_list_pybbqa.append(best)
+    RBconstraintSAA_list_pybbqa.append(best_constr)
 
-# x_med_SQSF = median_from_list(RBRand_SQSnobFit_list)
-# x_med_DIRECT = median_from_list(RBRand_DIRECT_list)
-# x_med_CUATROg = median_from_list(RBRand_CUATRO_global_list)
+# N_SAA = 1
+N_samples = 20
+RBnoiseSAA_list_SQSF = []
+RBconstraintSAA_list_SQSF = []
+for i in range(n_noise):
+    print('Iteration ', i, ' of SQSnobfit')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
+        sol = SQSnobFitWrapper().solve(f, x0, bounds, \
+                                    maxfun = max_f_eval, constraints=2)
+        best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoiseSAA_list_SQSF.append(best)
+    RBconstraintSAA_list_SQSF.append(best_constr)
+    
+# N_SAA = 1
+N_samples = 20
+RBnoiseSAA_list_DIRECT = []
+RBconstraintSAA_list_DIRECT = []
+init_radius = 0.1
+boundsDIR = np.array([[-1.5,1],[-1,1.5]])
+for i in range(n_noise):
+    print('Iteration ', i, ' of DIRECT')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
+        DIRECT_f = lambda x, grad: f(x)
+        sol = DIRECTWrapper().solve(DIRECT_f, x0, boundsDIR, \
+                                    maxfun = max_f_eval, constraints=2)
+        best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoiseSAA_list_DIRECT.append(best)
+    RBconstraintSAA_list_DIRECT.append(best_constr)
+    
+# N_SAA = 1
+N_samples = 20
+RBnoiseSAA_list_CUATROg = []
+RBconstraintSAA_list_CUATROg = []
+init_radius = 2
+for i in range(n_noise):
+    print('Iteration ', i, ' of CUATRO_g')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: Problem_rosenbrock(x, noise_matrix[i], N_SAA)
+        sol = CUATRO(f, x0, init_radius, bounds = bounds, max_f_eval = max_f_eval, \
+                          N_min_samples = 15, tolerance = 1e-10,\
+                          beta_red = 0.9, rnd = j, method = 'global', \
+                          constr_handling = 'Discrimination')
+        best.append(sol['f_best_so_far'][-1])
+        _, g = Problem_rosenbrock(sol['x_best_so_far'][-1], [0, 0, 0], N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RBnoiseSAA_list_CUATROg.append(best)
+    RBconstraintSAA_list_CUATROg.append(best_constr)
+    
 
-# ax, fig = trust_fig(oracle, bounds)
+with open('BayesRB_listNoiseConvSAA.pickle', 'rb') as handle:
+    RBnoiseSAA_list_Bayes = pickle.load(handle)
+    
+with open('BayesRB_listNoiseConstrSAA.pickle', 'rb') as handle:
+    RBconstraintSAA_list_Bayes = pickle.load(handle)
 
-# ax.plot(x_med_SQSF[:,0], x_med_SQSF[:,1], '--o', \
-#           label = 'SQSnobfit')
-# ax.plot(x_med_DIRECT[:,0], x_med_DIRECT[:,1], '--o', \
-#           label = 'DIRECT')
-# ax.plot(x_med_CUATROg[:,0], x_med_CUATROg[:,1], '--o', \
-#           label = 'CUATRO_g')
-# ax.set_xlabel('$x_1$')
-# ax.set_ylabel('$x_2$')
-# ax.legend()
-# ax.set_xlim(bounds[0])
-# ax.set_ylim(bounds[1])
-# fig.savefig('Publication Plots format/2DSolutionSpaceConvergence.svg', format = "svg")
 
+noise = ['%.3f' % noise_matrix[i][0] for i in range(n_noise)]
+noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
+
+
+convergence = list(itertools.chain(*RBnoiseSAA_list_pybbqa)) + \
+              list(itertools.chain(*RBnoiseSAA_list_SQSF)) + \
+              list(itertools.chain(*RBnoiseSAA_list_DIRECT)) + \
+              list(itertools.chain(*RBnoiseSAA_list_CUATROg)) + \
+              list(itertools.chain(*RBnoiseSAA_list_Bayes))
+              
+constraints = list(itertools.chain(*RBconstraintSAA_list_pybbqa)) + \
+              list(itertools.chain(*RBconstraintSAA_list_SQSF)) + \
+              list(itertools.chain(*RBconstraintSAA_list_DIRECT)) + \
+              list(itertools.chain(*RBconstraintSAA_list_CUATROg)) + \
+              list(itertools.chain(*RBconstraintSAA_list_Bayes))   
+              
+noise = list(itertools.chain(*noise_labels))*5
+method = ['Py-BOBYQA']*int(len(noise)/5) + ['SQSnobfit']*int(len(noise)/5) + \
+          ['DIRECT']*int(len(noise)/5) + ['CUATRO_g']*int(len(noise)/5) + \
+           ['Bayes. opt']*int(len(noise)/5)   
+
+data = {'Best function evaluation': convergence, \
+        "Constraint violation": constraints, \
+        "Noise standard deviation": noise, \
+        'Method': method}
+df = pd.DataFrame(data)
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 1.2}
+plt.rcParams.update(params)
+
+plt.rcParams.update(params)
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.legend([])
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_SAA2feval50Convergence.svg', format = "svg")
+plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.clf()
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=3)
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_SAA2feval50ConvergenceLabel.svg', format = "svg")
+plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.clf()
+
+
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", fliersize = 0)
+ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", dodge = True)
+plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.tight_layout()
+plt.savefig('Publication plots format/RB_SAA2feval50Constraints.svg', format = "svg")
+plt.show()
+plt.clf()
 
 
 

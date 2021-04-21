@@ -89,6 +89,20 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
 def Problem_rosenbrock(x):
     f1 = rosenbrock_constrained.rosenbrock_f
@@ -104,9 +118,13 @@ x0 = np.array([-0.5,1.5])
 max_f_eval = 100
 max_it = 50
 
+initial_output = Problem_rosenbrock(x0)
+
 
 RB_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, \
-                                      maxfun= max_f_eval, constraints=2)
+                                      maxfun= max_f_eval, constraints=2, \
+                                      seek_global_minimum= True, \
+                                      objfun_has_noise=False)
 
 N = 10
 RB_Nest_list = []
@@ -186,6 +204,7 @@ print('10 DIRECT iterations completed')
 with open('BayesRB_list.pickle', 'rb') as handle:
     RB_Bayes_list = pickle.load(handle)
 
+RB_Bayes_list = fix_starting_points(RB_Bayes_list, x0, initial_output)
 
 
 x_best_pyBbyqa = np.array(RB_pybobyqa['x_best_so_far'])
@@ -428,45 +447,45 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])   
-fig.savefig('Publication plots format/PromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])   
+fig.savefig('Publication plots format/RB_Model.svg', format = "svg")
  
     
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
 ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+                test_max_Nest, color = 'brown', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
 ax.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
-          label = 'Newton Fin. Diff.', c = 'black')
+          label = 'Newton.', c = 'black')
 ax.step(x_ind_BFGS, f_best_BFGS, where = 'post', \
           label = 'BFGS', c = 'orange')
 ax.step(x_ind_Adam, f_best_Adam, where = 'post', \
           label = 'Adam', c = 'blue')   
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 # ax.boxplot(test_BO, widths = 0.1, meanline = False, showfliers = False, manage_ticks = False)
 # ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
 
@@ -474,8 +493,8 @@ ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots format/NotSoPromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])
+fig.savefig('Publication plots format/RB_Others.svg', format = "svg")
 
 
 def method_convergence(ax, sol, label, col):
@@ -498,7 +517,22 @@ ax.set_ylim(bounds[1])
 ax.legend()
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/Bayes_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/Bayes_Convergence.svg', format = "svg")
+plt.show()
+plt.clf()
+
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_Nest_list[-1], 'Nesterov', 'grey')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.legend()
+ax.set_xlabel('$x_1$')
+ax.set_ylabel('$x_2$')
+ax.legend()
+plt.savefig('Experimental plots/Nesterov_Convergence.svg', format = "svg")
 plt.show()
 plt.clf()
 
@@ -510,7 +544,8 @@ ax.set_ylim(bounds[1])
 ax.legend()
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/CUATROl_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/CUATROl_Convergence.svg', format = "svg")
 plt.show()
 plt.clf()
 
@@ -522,7 +557,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/CUATROg_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/CUATROg_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()
@@ -534,7 +570,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/Snobfit_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/Snobfit_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()
@@ -546,7 +583,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/PyBOBYQA_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/PyBOBYQA_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()
@@ -559,7 +597,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/Adam_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/Adam_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()
@@ -572,7 +611,21 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/BFGS_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/BFGS_Convergence.svg', format = "svg")
+ax.legend()
+plt.show()
+plt.clf()
+
+ax, fig = trust_fig(oracle, bounds)
+ax = method_convergence(ax, RB_FiniteDiff, 'Newton', 'black')
+ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
+ax.set_xlim(bounds[0])
+ax.set_ylim(bounds[1])
+ax.set_xlabel('$x_1$')
+ax.set_ylabel('$x_2$')
+ax.legend()
+plt.savefig('Experimental plots/Newton_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()
@@ -585,8 +638,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/Simplex_Convergence')
 ax.legend()
+plt.savefig('Experimental plots/Simplex_Convergence.svg', format = "svg")
 plt.show()
 plt.clf()
 
@@ -598,7 +651,8 @@ ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
 ax.set_xlabel('$x_1$')
 ax.set_ylabel('$x_2$')
-plt.savefig('Experimental plots/DIRECT_Convergence')
+ax.legend()
+plt.savefig('Experimental plots/DIRECT_Convergence.svg', format = "svg")
 ax.legend()
 plt.show()
 plt.clf()

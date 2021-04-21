@@ -89,8 +89,22 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
-def Problem_rosenbrock(x):
+def Problem_rosenbrockRand(x):
     f1 = rosenbrock_constrained.rosenbrock_f
     f_noise = np.random.normal(0, 0.05)
     g1 = rosenbrock_constrained.rosenbrock_g1
@@ -106,12 +120,15 @@ x0 = np.array([-0.5,1.5])
 max_f_eval = 100
 max_it = 50
 
+initial_outputRand = Problem_rosenbrockRand(x0)
+
 N = 10
 RBRand_pybbqa_list = []
 for i in range(N):
-    RBRand_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrock, x0, bounds=bounds.T, \
+    RBRand_pybobyqa = PyBobyqaWrapper().solve(Problem_rosenbrockRand, x0, bounds=bounds.T, \
                                               maxfun= max_f_eval, constraints=2, \
-                                              seek_global_minimum = True)
+                                              seek_global_minimum = True, \
+                                              objfun_has_noise= True)
     RBRand_pybbqa_list.append(RBRand_pybobyqa)   
 print('10 Py-BOBYQA iterations completed')
 
@@ -119,7 +136,7 @@ N = 10
 RBRand_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    RBRand_Nest = nesterov_random(Problem_rosenbrock, x0, bounds, max_iter = 50, \
+    RBRand_Nest = nesterov_random(Problem_rosenbrockRand, x0, bounds, max_iter = 50, \
                           constraints = 2, rnd_seed = i, alpha = 1e-4)
     RBRand_Nest_list.append(RBRand_Nest)
 print('10 Nesterov iterations completed')
@@ -128,7 +145,7 @@ N = 10
 RBRand_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    RBRand_simplex = simplex_method(Problem_rosenbrock, x0, bounds, max_iter = 50, \
+    RBRand_simplex = simplex_method(Problem_rosenbrockRand, x0, bounds, max_iter = 50, \
                             constraints = 2, rnd_seed = i)
     RBRand_simplex_list.append(RBRand_simplex)
 print('10 simplex iterations completed')
@@ -136,7 +153,7 @@ print('10 simplex iterations completed')
 N = 10
 RBRand_findiff_list = []
 for i in range(N):
-    RBRand_FiniteDiff = finite_Diff_Newton(Problem_rosenbrock, x0, bounds = bounds, \
+    RBRand_FiniteDiff = finite_Diff_Newton(Problem_rosenbrockRand, x0, bounds = bounds, \
                                    con_weight = 100)
     RBRand_findiff_list.append(RBRand_FiniteDiff)
 print('10 Approx Newton iterations completed')
@@ -144,7 +161,7 @@ print('10 Approx Newton iterations completed')
 N = 10
 RBRand_BFGS_list = []
 for i in range(N):
-    RBRand_BFGS = BFGS_optimizer(Problem_rosenbrock, x0, bounds = bounds, \
+    RBRand_BFGS = BFGS_optimizer(Problem_rosenbrockRand, x0, bounds = bounds, \
                          con_weight = 100)
     RBRand_BFGS_list.append(RBRand_BFGS)
 print('10 BFGS iterations completed')
@@ -152,7 +169,7 @@ print('10 BFGS iterations completed')
 N = 10
 RBRand_Adam_list = []
 for i in range(N):
-    RBRand_Adam = Adam_optimizer(Problem_rosenbrock, x0, method = 'forward', \
+    RBRand_Adam = Adam_optimizer(Problem_rosenbrockRand, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
                                       max_f_eval = 100, con_weight = 100)
@@ -166,7 +183,7 @@ N = 10
 RBRand_CUATRO_global_list = []
 for i in range(N):
     rnd_seed = i
-    RBRand_CUATRO_global = CUATRO(Problem_rosenbrock, x0, init_radius, bounds = bounds, \
+    RBRand_CUATRO_global = CUATRO(Problem_rosenbrockRand, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'global', \
                           constr_handling = method)
@@ -180,7 +197,7 @@ N = 10
 RBRand_CUATRO_local_list = []
 for i in range(N):
     rnd_seed = i
-    RBRand_CUATRO_local = CUATRO(Problem_rosenbrock, x0, init_radius, bounds = bounds, \
+    RBRand_CUATRO_local = CUATRO(Problem_rosenbrockRand, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = rnd_seed, method = 'local', \
                           constr_handling = method)
@@ -190,7 +207,7 @@ print('10 CUATRO local iterations completed')
 N = 10
 RBRand_SQSnobFit_list = []
 for i in range(N):
-    RBRand_SQSnobFit = SQSnobFitWrapper().solve(Problem_rosenbrock, x0, bounds, \
+    RBRand_SQSnobFit = SQSnobFitWrapper().solve(Problem_rosenbrockRand, x0, bounds, \
                                    maxfun = max_f_eval, constraints=2)
     RBRand_SQSnobFit_list.append(RBRand_SQSnobFit)
 print('10 SnobFit iterations completed') 
@@ -198,9 +215,9 @@ print('10 SnobFit iterations completed')
 N = 10
 boundsDIR = np.array([[-1.5,1],[-1,1.5]])
 RBRand_DIRECT_list = []
-RB_DIRECT_f = lambda x, grad: Problem_rosenbrock(x)
+RB_DIRECT_fRand = lambda x, grad: Problem_rosenbrockRand(x)
 for i in range(N):
-    RBRand_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_f, x0, boundsDIR, \
+    RBRand_DIRECT =  DIRECTWrapper().solve(RB_DIRECT_fRand, x0, boundsDIR, \
                                    maxfun = max_f_eval, constraints=2)
     RBRand_DIRECT_list.append(RBRand_DIRECT)
 print('10 DIRECT iterations completed')    
@@ -208,6 +225,8 @@ print('10 DIRECT iterations completed')
 
 with open('BayesRB_listRand.pickle', 'rb') as handle:
     RBRand_Bayes_list = pickle.load(handle)
+
+RBRand_Bayes_list = fix_starting_points(RBRand_Bayes_list, x0, initial_outputRand)
 
 plt.rcParams["font.family"] = "Times New Roman"
 ft = int(15)
@@ -333,6 +352,7 @@ ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 fig1.savefig('RB_plots_Random/RBRand_CUATROg_Convergence_plot.svg', format = "svg")
 fig2.savefig('RB_plots_Random/RBRand_CUATROg_2Dspace_plot.svg', format = "svg")
+
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
 ax2, fig2 = trust_fig(oracle, bounds)
@@ -369,6 +389,10 @@ for i in range(len(RBRand_Bayes_list)):
 ax1.legend()
 ax1.set_yscale('log')
 ax2.legend()
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
 ax2.set_xlim(bounds[0])
 ax2.set_ylim(bounds[1])
 fig1.savefig('RB_plots_Random/RBRand_BO_Convergence_plot.svg', format = "svg")
@@ -492,25 +516,27 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'green', alpha = .5)
+                test_max_pybbqa, color = 'green', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])    
-fig.savefig('Publication plots format/RandPromisingMethods.svg', format = "svg")
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
+ax.set_xlim([1, 100])    
+fig.savefig('Publication plots format/RBRand_Model.svg', format = "svg")
     
 
 fig = plt.figure()
@@ -521,10 +547,10 @@ ax.fill_between(np.arange(1, 101), test_min_Nest, \
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
                 test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
                 test_max_findiff, color = 'grey', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'BFGS', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_BFGS, \
                 test_max_BFGS, color = 'orange', alpha = .5)
 ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
@@ -537,8 +563,10 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots format/RandNotSoPromisingMethods.svg', format = "svg")
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
+ax.set_xlim([1, 100])
+fig.savefig('Publication plots format/RBRand_Others.svg', format = "svg")
 
 
 
