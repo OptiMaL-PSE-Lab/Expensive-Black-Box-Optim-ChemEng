@@ -62,6 +62,43 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
+
+def medianx_from_list(solutions_list, x0):
+    N = len(solutions_list)
+    _, N_x = np.array(solutions_list[0]['x_best_so_far']).shape
+    f_best_all = np.zeros((N, 100))
+    x_best_all = np.zeros((N, 100, N_x))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_best = np.array(solutions_list[i]['x_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+                x_best_all[i,j,:] = np.array(x0)
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+                x_best_all[i,j,:] = np.array(x_best[ind][-1])
+    x_best_all
+    x_median = np.median(x_best_all, axis = 0)
+
+    return  x_median
+
 def self_opt_react(x, noise_level, N_SAA):
     plant = systems.Static_PDE_reaction_system()
     f = lambda x: plant.objective(x, noise_level[0])
@@ -82,94 +119,181 @@ max_f_eval = 50
 f = lambda x: self_opt_react(x, noise_init, N_SAA)
 DIRECT_f = lambda x, grad: self_opt_react(x, noise_init, N_SAA)
 
+initial_output = f(x0)
 
-N = 1
+### No Nesterov, Adam and BFGS
 
-
-SO_pybbqa_list = []
-for i in range(N):
-    SO_pybobyqa = PyBobyqaWrapper().solve(f, x0, bounds=bounds.T, \
-                                              maxfun= max_f_eval, constraints=1, \
-                                              seek_global_minimum = True, \
-                                              scaling_within_bounds = True, \
-                                              mu_con = 1e3)
-    SO_pybbqa_list.append(SO_pybobyqa)   
-print('Py-BOBYQA iterations completed')
+N = 10
 
 
-SO_simplex_list = []
-for i in range(N):
-    rnd_seed = i
-    SO_simplex = simplex_method(f, x0, bounds, max_iter = 50, max_f_eval = max_f_eval, \
-                            constraints = 1, rnd_seed = i, mu_con = 1e3)
-    SO_simplex_list.append(SO_simplex)
-print('Simplex iterations completed')
+# SO_pybbqa_list = []
+# for i in range(N):
+#     print('Py-BOBYQA: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_pybobyqa = PyBobyqaWrapper().solve(f, x0, bounds=bounds.T, \
+#                                               maxfun= max_f_eval, constraints=1, \
+#                                               seek_global_minimum = True, \
+#                                               scaling_within_bounds = True, \
+#                                               mu_con = 1e3)
+#     SO_pybbqa_list.append(SO_pybobyqa)   
 
-SO_findiff_list = []
-for i in range(N):
-    SO_FiniteDiff = finite_Diff_Newton(f, x0, bounds = bounds, \
-                                   con_weight = 1000)
-    SO_findiff_list.append(SO_FiniteDiff)
-print('Approx Newton iterations completed')
+# with open('pybbqaSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_pybbqa_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-SO_Adam_list = []
-for i in range(N):
-    SO_Adam = Adam_optimizer(f, x0, method = 'forward', \
-                                      bounds = bounds, alpha = 0.4, \
-                                      beta1 = 0.2, beta2  = 0.1, \
-                                      max_f_eval = 100, con_weight = 1000)
-    SO_Adam_list.append(SO_Adam)
-print('Adam iterations completed')
+with open('pybbqaSO_list.pickle', 'rb') as handle:
+    SO_pybbqa_list = pickle.load(handle)
+
+# SO_simplex_list = []
+# for i in range(N):
+#     rnd_seed = i
+#     print('Simplex: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_simplex = simplex_method(f, x0, bounds, max_iter = 50, max_f_eval = max_f_eval, \
+#                             constraints = 1, rnd_seed = i, mu_con = 1e3)
+#     SO_simplex_list.append(SO_simplex)
+# print('Simplex iterations completed')
+
+# with open('simplexSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_simplex_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('simplexSO_list.pickle', 'rb') as handle:
+    SO_simplex_list = pickle.load(handle)
+
+# SO_findiff_list = []
+# for i in range(N):
+#     print('Fin. Diff: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_FiniteDiff = finite_Diff_Newton(f, x0, bounds = bounds, \
+#                                     con_weight = 1000, max_f_eval=max_f_eval)
+#     SO_findiff_list.append(SO_FiniteDiff)
+# print('Approx Newton iterations completed')
+
+# with open('findiffSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_findiff_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+with open('findiffSO_list.pickle', 'rb') as handle:
+    SO_findiff_list = pickle.load(handle)
 
 
-# print(x0) 
-N_min_s = 15
-init_radius = 0.5
-method = 'Discrimination'
-SO_CUATRO_global_list = []
-for i in range(N):
-    rnd_seed = i
-    SO_CUATRO_global = CUATRO(f, x0, init_radius, bounds = bounds, \
-                          N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.9, rnd = rnd_seed, method = 'global', \
-                          constr_handling = method)
-    SO_CUATRO_global_list.append(SO_CUATRO_global)
-print('CUATRO global iterations completed')    
+
+# SO_Adam_list = []
+# for i in range(N):
+#     print('Adam: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_Adam = Adam_optimizer(f, x0, method = 'forward', \
+#                                       bounds = bounds, alpha = 0.4, \
+#                                       beta1 = 0.2, beta2  = 0.1, \
+#                                       max_f_eval = 100, con_weight = 1000)
+#     SO_Adam_list.append(SO_Adam)
+# print('Adam iterations completed')
+
+# with open('AdamSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_Adam_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# SO_BFGS_list = []
+# for i in range(N):
+#     print('BFGS: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_BFGS = BFGS_optimizer(f, x0, bounds = bounds, \
+#                              con_weight = 1000)
+#     SO_BFGS_list.append(SO_BFGS)
+# print('BFGS iterations completed')
+
+# with open('BFGSSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_BFGS_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# # print(x0) 
+# N_min_s = 15
+# init_radius = 0.5
+# method = 'Discrimination'
+# SO_CUATRO_global_list = []
+# for i in range(N):
+#     rnd_seed = i
+#     print('CUATRO_g: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_CUATRO_global = CUATRO(f, x0, init_radius, bounds = bounds, \
+#                           N_min_samples = N_min_s, tolerance = 1e-10,\
+#                           beta_red = 0.9, rnd = rnd_seed, method = 'global', \
+#                           constr_handling = method, max_f_eval= max_f_eval)
+#     SO_CUATRO_global_list.append(SO_CUATRO_global)
+# print('CUATRO global iterations completed')    
+
+# with open('CUATROgSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_CUATRO_global_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('CUATROgSO_list.pickle', 'rb') as handle:
+    SO_CUATRO_global_list = pickle.load(handle)
+
+# N_min_s = 6
+# init_radius = 0.1
+# method = 'Fitting'
+# SO_CUATRO_local_list = []
+# for i in range(N):
+#     rnd_seed = i
+#     print('CUATRO_l: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_CUATRO_local = CUATRO(f, x0, init_radius, bounds = bounds, \
+#                           N_min_samples = N_min_s, tolerance = 1e-10,\
+#                           beta_red = 0.5, rnd = rnd_seed, method = 'local', \
+#                           constr_handling = method, max_f_eval= max_f_eval)
+#     SO_CUATRO_local_list.append(SO_CUATRO_local)
+# print('CUATRO local iterations completed') 
+
+# with open('CUATROlSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_CUATRO_local_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('CUATROlSO_list.pickle', 'rb') as handle:
+    SO_CUATRO_local_list = pickle.load(handle)
 
 
-N_min_s = 6
-init_radius = 0.1
-method = 'Fitting'
-SO_CUATRO_local_list = []
-for i in range(N):
-    rnd_seed = i
-    SO_CUATRO_local = CUATRO(f, x0, init_radius, bounds = bounds, \
-                          N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.5, rnd = rnd_seed, method = 'local', \
-                          constr_handling = method)
-    SO_CUATRO_local_list.append(SO_CUATRO_local)
-print('CUATRO local iterations completed') 
+# SO_SQSnobFit_list = []
+# for i in range(N):
+#     print('Snobfit: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_SQSnobFit = SQSnobFitWrapper().solve(f, x0, bounds, \
+#                                    maxfun = max_f_eval, constraints=1, \
+#                                    mu_con = 1e3)
+#     SO_SQSnobFit_list.append(SO_SQSnobFit)
+# print('10 SnobFit iterations completed') 
 
-SO_SQSnobFit_list = []
-for i in range(N):
-    SO_SQSnobFit = SQSnobFitWrapper().solve(f, x0, bounds, \
-                                   maxfun = max_f_eval, constraints=1, \
-                                   mu_con = 1e3)
-    SO_SQSnobFit_list.append(SO_SQSnobFit)
-print('10 SnobFit iterations completed') 
+# with open('SnobfitSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_SQSnobFit_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# print(x0)
+with open('SnobfitSO_list.pickle', 'rb') as handle:
+    SO_SQSnobFit_list = pickle.load(handle)
 
 # SO_DIRECT_list = []
 # for i in range(N):
+#     print('DIRECT: iteration ', i, ' out of ', N, ' ongoing')
 #     SO_DIRECT =  DIRECTWrapper().solve(DIRECT_f, x0, bounds, mu_con = 1e3, \
 #                                     maxfun = max_f_eval, constraints=1)
 #     SO_DIRECT_list.append(SO_DIRECT)
-# print('10 DIRECT iterations completed')    
+# print('10 DIRECT iterations completed')  
+
+# with open('directSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_DIRECT_list, handle, protocol=pickle.HIGHEST_PROTOCOL)  
+
+with open('DIRECTSO_list.pickle', 'rb') as handle:
+    SO_DIRECT_list = pickle.load(handle)
+
+# N = 10 ; nbr_feval = 30
+# SO_Bayes_list = []
+# for i in range(N):
+#     Bayes = BayesOpt()
+#     pyro.set_rng_seed(i)
+#     print('Bayes: iteration ', i, ' out of ', N, ' ongoing')
+#     SO_Bayes = Bayes.solve(f, x0, acquisition='EI',bounds=bounds.T, \
+#                             print_iteration = True, constraints=1, casadi=True, \
+#                             maxfun = nbr_feval, ).output_dict
+#     SO_Bayes_list.append(SO_Bayes)
+ 
+# print('10 BayesOpt deterministic iterations completed')
+
+# with open('BayesSO_list.pickle', 'wb') as handle:
+#     pickle.dump(SO_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('BayesSO_list.pickle', 'rb') as handle:
+    SO_Bayes_list = pickle.load(handle)
+
+SO_Bayes_list = fix_starting_points(SO_Bayes_list, x0, initial_output)
+SO_DIRECT_list = fix_starting_points(SO_DIRECT_list, x0, initial_output)
+
 
 plant = systems.Static_PDE_reaction_system()
 
-N_draw = 20
+N_draw = 30
 x = np.linspace(0, 1, N_draw)
 y = np.linspace(0, 1, N_draw)
 X, Y = np.meshgrid(x, y)
@@ -313,28 +437,28 @@ ax2.set_ylim(bounds[1])
 fig1.savefig('Plots/SO_CUATROl_Convergence_plot.svg', format = "svg")
 fig2.savefig('Plots/SO_CUATROl_2Dspace_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
-# for i in range(len(SO_Bayes_list)):
-#     x_best = np.array(SO_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(SO_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(SO_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# # ax1.set_yscale('log')
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax2.set_xlabel('$x_1$')
-# ax2.set_ylabel('$x_2$')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
-# fig1.savefig('Plots/SO_BO_Convergence_plot.svg', format = "svg")
-# fig2.savefig('Plots/SO_BO_2Dspace_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
+for i in range(len(SO_Bayes_list)):
+    x_best = np.array(SO_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(SO_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(SO_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+# ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('Plots/SO_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('Plots/SO_BO_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -379,26 +503,26 @@ ax2.legend()
 fig1.savefig('Plots/SO_SQSnobFit_Convergence_plot.svg', format = "svg")
 fig2.savefig('Plots/SO_SQSnobFit_2Dspace_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
-# for i in range(len(SO_DIRECT_list)):
-#     x_best = np.array(SO_DIRECT_list[i]['x_best_so_far'])
-#     f_best = np.array(SO_DIRECT_list[i]['f_best_so_far'])
-#     x_ind = np.array(SO_DIRECT_list[i]['samples_at_iteration'])
-#     ax1.step(x_ind, f_best, where = 'post', label = 'DIRECT'+str(i))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'DIRECT'+str(i))
-# ax1.legend()
-# # ax1.set_yscale('log')
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax2.set_xlabel('$x_1$')
-# ax2.set_ylabel('$x_2$')
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
-# ax2.legend()
-# fig1.savefig('Plots/SO_DIRECT_Convergence_plot.svg', format = "svg")
-# fig2.savefig('Plots/SO_DIRECT_2Dspace_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
+for i in range(len(SO_DIRECT_list)):
+    x_best = np.array(SO_DIRECT_list[i]['x_best_so_far'])
+    f_best = np.array(SO_DIRECT_list[i]['f_best_so_far'])
+    x_ind = np.array(SO_DIRECT_list[i]['samples_at_iteration'])
+    ax1.step(x_ind, f_best, where = 'post', label = 'DIRECT'+str(i))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', label = 'DIRECT'+str(i))
+ax1.legend()
+# ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig1.savefig('Plots/SO_DIRECT_Convergence_plot.svg', format = "svg")
+fig2.savefig('Plots/SO_DIRECT_2Dspace_plot.svg', format = "svg")
 
 
 
@@ -411,18 +535,18 @@ sol_Splx = average_from_list(SO_simplex_list)
 test_Splx, test_av_Splx, test_min_Splx, test_max_Splx = sol_Splx
 sol_SQSF = average_from_list(SO_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
-# sol_DIR = average_from_list(SO_DIRECT_list)
-# test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
+sol_DIR = average_from_list(SO_DIRECT_list)
+test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
 sol_pybbyqa = average_from_list(SO_pybbqa_list)
 test_pybbqa, test_av_pybbqa, test_min_pybbqa, test_max_pybbqa = sol_pybbyqa
 sol_findiff = average_from_list(SO_findiff_list)
 test_findiff, test_av_findiff, test_min_findiff, test_max_findiff = sol_findiff
-# sol_BFGS = average_from_list(RTORand_BFGS_list)
+# sol_BFGS = average_from_list(SO_BFGS_list)
 # test_BFGS, test_av_BFGS, test_min_BFGS, test_max_BFGS = sol_BFGS
-sol_Adam = average_from_list(SO_Adam_list)
-test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
-# sol_BO = average_from_list(SO_Bayes_list)
-# test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
+# sol_Adam = average_from_list(SO_Adam_list)
+# test_Adam, test_av_Adam, test_min_Adam, test_max_Adam = sol_Adam
+sol_BO = average_from_list(SO_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 
 
@@ -430,59 +554,121 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'green', alpha = .5)
+                test_max_pybbqa, color = 'green', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])    
-fig.savefig('Publication Plots/PromisingMethodsRand.svg', format = "svg")
+ax.set_xlim([1, 50])    
+ax.legend(loc = 'upper right')
+fig.savefig('Publication Plots/SO_Model.svg', format = "svg")
 
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
-ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+# ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
+# ax.fill_between(np.arange(1, 101), test_min_Nest, \
+#                 test_max_Nest, color = 'brown', alpha = .5)
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
-                test_max_findiff, color = 'grey', alpha = .5)
+                test_max_findiff, color = 'grey', alpha = .5, step = 'post')
 # ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
 # ax.fill_between(np.arange(1, 101), test_min_BFGS, \
 #                 test_max_BFGS, color = 'orange', alpha = .5)
-ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
-ax.fill_between(np.arange(1, 101), test_min_Adam, \
-                test_max_Adam, color = 'blue', alpha = .5)
+# ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
+# ax.fill_between(np.arange(1, 101), test_min_Adam, \
+                # test_max_Adam, color = 'blue', alpha = .5)
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 
 
 ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])
-fig.savefig('Publication Plots/NotSoPromisingMethodsRand.svg', format = "svg")
+ax.set_xlim([1, 50])
+ax.legend(loc = 'upper right')
+fig.savefig('Publication Plots/SO_Others.svg', format = "svg")
 
 
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+DIRECT_med = medianx_from_list(SO_DIRECT_list, x0)
+CUATROg_med = medianx_from_list(SO_CUATRO_global_list, x0)
+Bayes_med = medianx_from_list(SO_Bayes_list, x0)
+SQSF_med = medianx_from_list(SO_SQSnobFit_list, x0)
+
+ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
+ax2.plot(DIRECT_med[:,0], DIRECT_med[:,1], label = 'DIRECT', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(CUATROg_med[:,0], CUATROg_med[:,1], label = 'CUATRO_g', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(Bayes_med[:,0], Bayes_med[:,1], label = 'Bayes. Opt.', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(SQSF_med[:,0], SQSF_med[:,1], label = 'Snobfit', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.scatter(x0[0], x0[1], label = 'Init. guess', marker = 'D', s = 40, c = 'k')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig2.savefig('Publication plots/SO_2D_convergence_best.svg', format = "svg")
+
+def count_feasible_sampling(inpt, list_input = True, threshold = 0):
+    if list_input:
+        count = 0 ; N_tot = 0
+        N = len(inpt)
+        for i in range(N):
+            arr = np.array(inpt[i]['g_store'])
+            count += np.sum(np.product((arr <= threshold).astype(int), axis = 1))
+            N_tot += len(arr)
+        return count/N_tot 
+    else:
+        arr = np.array(inpt['g_store'])
+        N_tot = len(arr)
+        count = np.sum(np.product((arr <= threshold).astype(int), axis = 1))
+        return count/N_tot
+       
+SO_constr_list = []
+# SO_constr_list.append(['Adam', count_feasible_sampling(SO_Adam, list_input = False)])
+SO_constr_list.append(['Bayes', count_feasible_sampling(SO_Bayes_list, threshold = 1e-3)])
+SO_constr_list.append(['CUATROg', count_feasible_sampling(SO_CUATRO_global_list)])
+SO_constr_list.append(['CUATROl', count_feasible_sampling(SO_CUATRO_local_list)])
+SO_constr_list.append(['DIRECT', count_feasible_sampling(SO_DIRECT_list)])
+SO_constr_list.append(['Newton', count_feasible_sampling(SO_findiff_list)])
+# SO_constr_list.append(['Nesterov', count_feasible_sampling(SO_Nest_list)])
+SO_constr_list.append(['PyBOBYQA', count_feasible_sampling(SO_pybbqa_list)])
+SO_constr_list.append(['Simplex', count_feasible_sampling(SO_simplex_list)])
+SO_constr_list.append(['SQSnobfit', count_feasible_sampling(SO_SQSnobFit_list)])
+
+with open('SO_constraintSat_list.pickle', 'wb') as handle:
+    pickle.dump(SO_constr_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 

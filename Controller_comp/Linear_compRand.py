@@ -47,6 +47,21 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
+
 def plot_sys_respRand(pi, plot, method, x0 = [15, 15], xref = [10, 10], N=200, T=3):
     _, sys_resp, control_resp = phi_rand(pi, x0 = x0, N = N, \
                                     T = T, return_sys_resp = True)
@@ -68,11 +83,15 @@ bounds = np.array([[0, 8], [0, 8], [0, 8], [0, 8]])
 
 max_f_eval = 100
 
+initial_outputRand = phi_rand(x0)
+
 N = 10
 ContrLinRand_pybobyqa_list = []
 for i in range(N):
     ContrLinRand_pybobyqa = PyBobyqaWrapper().solve(phi_rand, x0, bounds=bounds.T, \
-                                      maxfun= max_f_eval, constraints=1, seek_global_minimum = True)
+                                      maxfun= max_f_eval, constraints=1, \
+                                      seek_global_minimum = True, \
+                                      objfun_has_noise= True)
     ContrLinRand_pybobyqa_list.append(ContrLinRand_pybobyqa)
 print('10 Py-BOBYQA iterations completed')
 
@@ -100,15 +119,16 @@ ContrLinRand_BFGS_list = []
 ContrLinRand_Adam_list = []
 for i in range(N):
     ContrLinRand_FiniteDiff = finite_Diff_Newton(phi_rand, x0, bounds = bounds, \
-                                    con_weight = 100)
+                                    con_weight = 100, check_bounds = True)
     
     ContrLinRand_BFGS = BFGS_optimizer(phi_rand, x0, bounds = bounds, \
-                          con_weight = 100)
+                          con_weight = 100, check_bounds = True)
     
     ContrLinRand_Adam = Adam_optimizer(phi_rand, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
-                                      max_f_eval = 100, con_weight = 100)
+                                      max_f_eval = 100, con_weight = 100, \
+                                      check_bounds = True)
     ContrLinRand_FiniteDiff_list.append(ContrLinRand_FiniteDiff)
     ContrLinRand_BFGS_list.append(ContrLinRand_BFGS)
     ContrLinRand_Adam_list.append(ContrLinRand_Adam)
@@ -168,6 +188,17 @@ print('10 DIRECT iterations completed')
 with open('BayesContrLinRand_list.pickle', 'rb') as handle:
     ContrLinRand_Bayes_list = pickle.load(handle)
 
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+ContrLinRand_Bayes_list = fix_starting_points(ContrLinRand_Bayes_list, x0, initial_outputRand)
+ContrLinRand_DIRECT_list = fix_starting_points(ContrLinRand_DIRECT_list, x0, initial_outputRand)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -261,7 +292,7 @@ for i in range(len(ContrLinRand_Bayes_list)):
     f_best = np.array(ContrLinRand_Bayes_list[i]['f_best_so_far'])
     nbr_feval = len(ContrLinRand_Bayes_list[i]['f_store'])
     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+          label = 'BO'+str(i))
 ax1.legend()
 ax1.set_xlabel('Nbr. of function evaluations')
 ax1.set_ylabel('Best function evaluation')
@@ -353,52 +384,58 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
+                test_max_pybbqa, color = 'green', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit*', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'red', alpha = .5)
+                test_max_BO, color = 'red', alpha = .5, step = 'post')
 ## BO placeholder: red
 
 ax.legend()
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])    
-fig.savefig('Controller_publication_plots/PromisingMethodsRand.svg', format = "svg")
+ax.set_xlim([1, 100])  
+ax.legend(loc = 'upper right')  
+fig.savefig('Controller_publication_plots/ContrLinRand_Model.svg', format = "svg")
 
 
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
 ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+                test_max_Nest, color = 'brown', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
-                test_max_findiff, color = 'grey', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+                test_max_findiff, color = 'grey', alpha = .5, step = 'post')
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'BFGS', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_BFGS, \
-                test_max_BFGS, color = 'orange', alpha = .5)
+                test_max_BFGS, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
 ax.fill_between(np.arange(1, 101), test_min_Adam, \
-                test_max_Adam, color = 'blue', alpha = .5)
+                test_max_Adam, color = 'blue', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 
 ax.legend()
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Controller_publication_plots/NotSoPromisingMethodsRand.svg', format = "svg")
+ax.set_xlim([1, 100])
+ax.legend(loc = 'upper right')
+fig.savefig('Controller_publication_plots/ContrLinRand_Others.svg', format = "svg")
 
 
 

@@ -12,6 +12,26 @@ def project_to_bounds(x, bounds):
             node[j] = bounds[j,1]
     return node
 
+def extract_best(x_store, f_store, g_store, samples_at_iteration):
+    N_f = len(f_store)
+    _, N_x = x_store.shape
+    _, N_g = g_store.shape
+    N_it = len(samples_at_iteration)
+    x_best = np.zeros((N_it, N_x))
+    f_best = np.zeros(N_it)
+    g_best = np.zeros((N_it, N_g))
+    for i in range(N_it):
+        nbr_samples = samples_at_iteration[i]
+        feas = np.product((np.array(g_store[:int(nbr_samples)]) <= 0).astype(int), axis = 1)
+        idx = np.where(f_store == np.min(f_store[:int(nbr_samples)][feas == 1]))
+        # print(idx)
+        f_best[i] = f_store[idx[0][0]]     # initialising function store
+        x_best[i] = x_store[idx[0][0]]
+        g_best[i] = g_store[idx[0][0]]
+    return x_best, f_best, g_best
+    
+
+
 def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
                    mu_con = 1e3, rnd_seed = 0, initialisation = 0.1):
     '''
@@ -186,10 +206,11 @@ def simplex_method(f,x0,bounds,max_iter,constraints, max_f_eval = 100, \
     output_dict['g_store'] = g_store
     output_dict['x_store'] = x_store
     output_dict['f_store'] = f_store
-    output_dict['g_best_so_far'] = g_best_so_far[:its+1]
-    output_dict['x_best_so_far'] = x_best_so_far[:its+1]
-    output_dict['f_best_so_far'] = f_best_so_far[:its+1]
     output_dict['N_evals'] = f_eval_count
     output_dict['samples_at_iteration'] = nbr_samples[:its+1]
+    x_best, f_best, g_best = extract_best(x_store, f_store, g_store, nbr_samples[:its+1])
+    output_dict['g_best_so_far'] = g_best
+    output_dict['x_best_so_far'] = x_best
+    output_dict['f_best_so_far'] = f_best
     
     return output_dict

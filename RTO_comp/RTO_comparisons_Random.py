@@ -54,6 +54,20 @@ def RTO_rand(x):
     g2 = plant.WO_con2_sys_ca
     return f(x), [g1(x), g2(x)]
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
 def average_from_list(solutions_list):
     N = len(solutions_list)
@@ -85,6 +99,7 @@ bounds  = np.array([[4., 7.], [70., 100.]])
 max_f_eval = 100
 max_it = 100
 
+initial_outputRand = RTO_rand(x0)
 
 N = 10
 RTORand_pybbqa_list = []
@@ -92,8 +107,9 @@ for i in range(N):
     RTORand_pybobyqa = PyBobyqaWrapper().solve(RTO_rand, x0, bounds=bounds.T, \
                                               maxfun= max_f_eval, constraints=2, \
                                               seek_global_minimum = True, \
+                                              objfun_has_noise=True, \
                                               scaling_within_bounds = True, \
-                                              mu_con = 1e6)
+                                              mu_con = 1e7)
     RTORand_pybbqa_list.append(RTORand_pybobyqa)   
 print('10 Py-BOBYQA iterations completed')
 # RTO_pybobyqa = PyBobyqaWrapper().solve(RTO, x0, bounds=bounds.T, \
@@ -219,6 +235,9 @@ plt.rc('font', **font)
 params = {'legend.fontsize': 12.5,
               'legend.handlelength': 2}
 plt.rcParams.update(params)
+
+RTORand_Bayes_list = fix_starting_points(RTORand_Bayes_list, x0, initial_outputRand)
+RTORand_DIRECT_list = fix_starting_points(RTORand_DIRECT_list, x0, initial_outputRand)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -470,27 +489,27 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
-                test_max_pybbqa, color = 'green', alpha = .5)
+                test_max_pybbqa, color = 'green', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])    
-fig.savefig('Publication plots/PromisingMethodsRand.svg', format = "svg")
+ax.set_xlim([1, 100])    
+fig.savefig('Publication plots/RTORand_Model.svg', format = "svg")
 
 
 fig = plt.figure()
@@ -519,7 +538,65 @@ ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots/NotSoPromisingMethodsRand.svg', format = "svg")
+ax.legend(loc = 'upper right')
+ax.set_xlim([1, 100])
+fig.savefig('Publication plots/RTORand_Others.svg', format = "svg")
+
+
+def medianx_from_list(solutions_list, x0):
+    N = len(solutions_list)
+    _, N_x = np.array(solutions_list[0]['x_best_so_far']).shape
+    f_best_all = np.zeros((N, 100))
+    x_best_all = np.zeros((N, 100, N_x))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_best = np.array(solutions_list[i]['x_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+                x_best_all[i,j,:] = np.array(x0)
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+                x_best_all[i,j,:] = np.array(x_best[ind][-1])
+    x_best_all
+    x_median = np.median(x_best_all, axis = 0)
+
+    return  x_median
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+CUATROl_med = medianx_from_list(RTORand_CUATRO_local_list, x0)
+CUATROg_med = medianx_from_list(RTORand_CUATRO_global_list, x0)
+Bayes_med = medianx_from_list(RTORand_Bayes_list, x0)
+SQSF_med = medianx_from_list(RTORand_SQSnobFit_list, x0)
+
+ax2, fig2 = trust_fig(X, Y, Z, g1, g2)
+ax2.plot(CUATROl_med[:,0], CUATROl_med[:,1], label = 'CUATRO_l', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(CUATROg_med[:,0], CUATROg_med[:,1], label = 'CUATRO_g', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(Bayes_med[:,0], Bayes_med[:,1], label = 'Bayes. Opt.', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(SQSF_med[:,0], SQSF_med[:,1], label = 'Snobfit', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.scatter(x0[0], x0[1], label = 'Init. guess', marker = 'D', s = 40, c = 'k')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig2.savefig('Publication plots/RTORand_2D_convergence_best.svg', format = "svg")
+
+
+
 
 

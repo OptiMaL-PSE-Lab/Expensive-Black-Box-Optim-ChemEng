@@ -55,17 +55,20 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
             
-
-# def scaling(x):
-#     y = np.zeros(len(x))
-#     y[0] = (x[0] - 4)/(7 - 4)
-#     y[1] = (x[1] - 70)/(100 - 70)
-#     return y
-
-# def extract_FT(x):
-#     x[0] = 4 + (7 - 4)*x[0]
-#     x[1] = 70 + (100 - 70)*x[1]
-#     return x
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
 def RTO(x):
     # x = extract_FT(x)
@@ -82,9 +85,12 @@ bounds  = np.array([[4., 7.], [70., 100.]])
 max_f_eval = 100
 max_it = 100
 
+initial_output = RTO(x0)
+
 RTO_pybobyqa = PyBobyqaWrapper().solve(RTO, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=2, \
                                       scaling_within_bounds = True, \
+                                      objfun_has_noise=False, \
                                       mu_con = 1e6)
 
 N = 10
@@ -106,7 +112,7 @@ for i in range(N):
 print('10 simplex iterations completed')
 
 RTO_FiniteDiff = finite_Diff_Newton(RTO, x0, bounds = bounds, \
-                                    con_weight = 100)
+                                    con_weight = 1e6)
  
 # RTO_BFGS = BFGS_optimizer(RTO, x0, bounds = bounds, \
 #                           con_weight = 100)
@@ -114,7 +120,7 @@ RTO_FiniteDiff = finite_Diff_Newton(RTO, x0, bounds = bounds, \
 RTO_Adam = Adam_optimizer(RTO, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
-                                      max_f_eval = 100, con_weight = 100)
+                                      max_f_eval = 100, con_weight = 1e6)
  
 N_min_s = 15
 init_radius = 10
@@ -164,6 +170,8 @@ print('10 DIRECT iterations completed')
 with open('BayesRTO_list.pickle', 'rb') as handle:
     RTO_Bayes_list = pickle.load(handle)
 
+RTO_Bayes_list = fix_starting_points(RTO_Bayes_list, x0, initial_output)
+RTO_DIRECT_list = fix_starting_points(RTO_DIRECT_list, x0, initial_output)
 
 plt.rcParams["font.family"] = "Times New Roman"
 ft = int(15)
@@ -415,45 +423,46 @@ fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
           label = 'BO', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
-                test_max_BO, color = 'r', alpha = .5)
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 # ax.set_yscale('log')
-ax.set_xlim([0, 99])   
-fig.savefig('Publication plots/PromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])   
+
+fig.savefig('Publication plots/RTO_Model.svg', format = "svg")
  
     
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
 ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+                test_max_Nest, color = 'brown', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
 ax.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
-          label = 'Newton Fin. Diff.', c = 'black')
+          label = 'Newton', c = 'black')
 # ax.step(np.arange(f_best_BFGS), f_best_BFGS, where = 'post', \
 #           label = 'BFGS', c = 'orange')
 ax.step(x_ind_Adam, f_best_Adam, where = 'post', \
           label = 'Adam', c = 'blue')   
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 # ax.boxplot(test_BO, widths = 0.1, meanline = False, showfliers = False, manage_ticks = False)
 # ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
 
@@ -461,8 +470,72 @@ ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 # ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots/NotSoPromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])
+ax.legend(loc = 'upper right')
+fig.savefig('Publication plots/RTO_Others.svg', format = "svg")
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+CUATROl_med = medianx_from_list(RTO_CUATRO_local_list, x0)
+CUATROg_med = medianx_from_list(RTO_CUATRO_global_list, x0)
+Bayes_med = medianx_from_list(RTO_Bayes_list, x0)
+SQSF_med = medianx_from_list(RTO_SQSnobFit_list, x0)
+
+ax2, fig2 = trust_fig(X, Y, Z, g1, g2)
+ax2.plot(CUATROl_med[:,0], CUATROl_med[:,1], label = 'CUATRO_l', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(CUATROg_med[:,0], CUATROg_med[:,1], label = 'CUATRO_g', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(Bayes_med[:,0], Bayes_med[:,1], label = 'Bayes. Opt.', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(SQSF_med[:,0], SQSF_med[:,1], label = 'Snobfit', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.scatter(x0[0], x0[1], label = 'Init. guess', marker = 'D', s = 40, c = 'k')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig2.savefig('Publication plots/RTO_2D_convergence_best.svg', format = "svg")
+
+
+# def count_feasible_sampling(inpt, list_input = True, threshold = 0):
+#     if list_input:
+#         count = 0 ; N_tot = 0
+#         N = len(inpt)
+#         for i in range(N):
+#             arr = np.array(inpt[i]['g_store'])
+#             count += np.sum(np.product((arr <= threshold).astype(int), axis = 1))
+#             N_tot += len(arr)
+#         return count/N_tot 
+#     else:
+#         arr = np.array(inpt['g_store'])
+#         N_tot = len(arr)
+#         count = np.sum(np.product((arr <= threshold).astype(int), axis = 1))
+#         return count/N_tot
+       
+# RTO_constr_list = []
+# RTO_constr_list.append(['Adam', count_feasible_sampling(RTO_Adam, list_input = False)])
+# RTO_constr_list.append(['Bayes', count_feasible_sampling(RTO_Bayes_list, threshold = 1e-3)])
+# RTO_constr_list.append(['CUATROg', count_feasible_sampling(RTO_CUATRO_global_list)])
+# RTO_constr_list.append(['CUATROl', count_feasible_sampling(RTO_CUATRO_local_list)])
+# RTO_constr_list.append(['DIRECT', count_feasible_sampling(RTO_DIRECT_list)])
+# RTO_constr_list.append(['Newton', count_feasible_sampling(RTO_FiniteDiff, list_input = False)])
+# RTO_constr_list.append(['Nesterov', count_feasible_sampling(RTO_Nest_list)])
+# RTO_constr_list.append(['PyBOBYQA', count_feasible_sampling(RTO_pybobyqa, list_input = False)])
+# RTO_constr_list.append(['Simplex', count_feasible_sampling(RTO_simplex_list)])
+# RTO_constr_list.append(['SQSnobfit', count_feasible_sampling(RTO_SQSnobFit_list)])
+
+# with open('RTO_constraintSat_list.pickle', 'wb') as handle:
+#     pickle.dump(RTO_constr_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
 

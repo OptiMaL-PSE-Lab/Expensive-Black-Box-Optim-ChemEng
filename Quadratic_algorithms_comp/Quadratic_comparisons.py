@@ -86,6 +86,20 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
 def Problem_quadratic(x):
     f = quadratic_constrained.quadratic_f
@@ -101,17 +115,21 @@ x0 = np.array([1, 1])
 max_f_eval = 100
 max_it = 100
 
+initial_output = Problem_quadratic(x0)
 
 quadratic_pybobyqa = PyBobyqaWrapper().solve(Problem_quadratic, x0, bounds=bounds.T, \
-                                      maxfun= max_f_eval, constraints=2)
+                                      maxfun= max_f_eval, constraints=2, \
+                                      seek_global_minimum= True, \
+                                      objfun_has_noise=False)
 # print(x0)
     
 N = 10
 quadratic_Nest_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_Nest = nesterov_random(Problem_quadratic, x0, bounds, max_iter = 50, \
-                          constraints = 1, rnd_seed = i, alpha = 1e-3, mu = 1e-2)
+    quadratic_Nest = nesterov_random(Problem_quadratic, x0, bounds, max_iter = 100, \
+                          constraints = 1, rnd_seed = i, alpha = 1e-3, mu = 1e-2, \
+                           max_f_eval = max_f_eval)
     quadratic_Nest_list.append(quadratic_Nest)
 print('10 Nesterov iterations completed')
 # print(x0)
@@ -120,8 +138,8 @@ N = 10
 quadratic_simplex_list = []
 for i in range(N):
     rnd_seed = i
-    quadratic_simplex = simplex_method(Problem_quadratic, x0, bounds, max_iter = 50, \
-                            constraints = 1, rnd_seed = i)
+    quadratic_simplex = simplex_method(Problem_quadratic, x0, bounds, max_iter = 100, \
+                            constraints = 1, rnd_seed = i, max_f_eval = max_f_eval)
     quadratic_simplex_list.append(quadratic_simplex)
 print('10 simplex iterations completed')
 
@@ -151,7 +169,7 @@ for i in range(N):
 print('10 CUATRO global iterations completed')    
 
 N_min_s = 6
-init_radius = 0.1
+init_radius = 0.5
 method = 'Fitting'
 N = 10
 quadratic_CUATRO_local_list = []
@@ -159,7 +177,7 @@ for i in range(N):
     rnd_seed = i
     quadratic_CUATRO_local = CUATRO(Problem_quadratic, x0, init_radius, bounds = bounds, \
                           N_min_samples = N_min_s, tolerance = 1e-10,\
-                          beta_red = 0.5, rnd = rnd_seed, method = 'local', \
+                          beta_red = 0.9, rnd = rnd_seed, method = 'local', \
                           constr_handling = method)
     quadratic_CUATRO_local_list.append(quadratic_CUATRO_local)
 print('10 CUATRO local iterations completed') 
@@ -181,33 +199,12 @@ for i in range(N):
     quadratic_DIRECT_list.append(quadratic_DIRECT)
 print('10 DIRECT iterations completed')     
 
-# with open('BayesQuadraticTight_list.pickle', 'rb') as handle:
-#     quadratic_Bayes_list = pickle.load(handle)
 
-# N = 10
-# quadratic_Bayes_list = []
-# for i in range(1):
-#     Bayes = BayesOpt()
-#     pyro.set_rng_seed(i)
-    
-#     if i<3:
-#         nbr_feval = 40
-#     elif i<6:
-#         nbr_feval = 30
-#     else:
-#         nbr_feval = 20
-    
-#     quadratic_Bayes = Bayes.solve(Problem_quadratic, x0, acquisition='EI',bounds=bounds.T, \
-#                             print_iteration = True, constraints= 1, casadi=True, \
-#                             maxfun = nbr_feval, ).output_dict
-#     quadratic_Bayes_list.append(quadratic_Bayes)
- 
-# print('10 BayesOpt iterations completed')
+with open('BayesQuadratic_list.pickle', 'rb') as handle:
+    quadratic_Bayes_list = pickle.load(handle)
 
-# with open('BayesQuadraticTight_list.pickle', 'wb') as handle:
-#     pickle.dump(quadratic_Bayes_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
+quadratic_Bayes_list = fix_starting_points(quadratic_Bayes_list, x0, initial_output)
+quadratic_DIRECT_list = fix_starting_points(quadratic_DIRECT_list, x0, initial_output)
 
 x_best_pyBbyqa = np.array(quadratic_pybobyqa['x_best_so_far'])
 f_best_pyBbyqa = np.array(quadratic_pybobyqa['f_best_so_far'])
@@ -225,6 +222,14 @@ x_ind_BFGS = np.array(quadratic_BFGS['samples_at_iteration'])
 x_best_Adam = np.array(quadratic_Adam['x_best_so_far'])
 f_best_Adam = np.array(quadratic_Adam['f_best_so_far'])
 x_ind_Adam = np.array(quadratic_Adam['samples_at_iteration'])
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -308,28 +313,28 @@ ax2.set_ylim(bounds[1])
 fig1.savefig('Quadratic_plots/Quadratic_CUATROl_Convergence_plot.svg', format = "svg")
 fig2.savefig('Quadratic_plots/Quadratic_CUATROl_2Dspace_plot.svg', format = "svg")
 
-# fig1 = plt.figure()
-# ax1 = fig1.add_subplot()
-# ax2, fig2 = trust_fig(oracle, bounds)
-# for i in range(len(quadratic_Bayes_list)):
-#     x_best = np.array(quadratic_Bayes_list[i]['x_best_so_far'])
-#     f_best = np.array(quadratic_Bayes_list[i]['f_best_so_far'])
-#     nbr_feval = len(quadratic_Bayes_list[i]['f_store'])
-#     ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-#     ax2.plot(x_best[:,0], x_best[:,1], '--', \
-#           label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
-# ax1.legend()
-# ax1.set_yscale('log')
-# ax1.set_xlabel('Nbr. of function evaluations')
-# ax1.set_ylabel('Best function evaluation')
-# ax2.set_xlabel('$x_1$')
-# ax2.set_ylabel('$x_2$')
-# ax2.legend()
-# ax2.set_xlim(bounds[0])
-# ax2.set_ylim(bounds[1])
-# fig1.savefig('RB_plots/quadratic_BO_Convergence_plot.svg', format = "svg")
-# fig2.savefig('RB_plots/quadratic_BO_2Dspace_plot.svg', format = "svg")
+fig1 = plt.figure()
+ax1 = fig1.add_subplot()
+ax2, fig2 = trust_fig(oracle, bounds)
+for i in range(len(quadratic_Bayes_list)):
+    x_best = np.array(quadratic_Bayes_list[i]['x_best_so_far'])
+    f_best = np.array(quadratic_Bayes_list[i]['f_best_so_far'])
+    nbr_feval = len(quadratic_Bayes_list[i]['f_store'])
+    ax1.step(np.arange(len(f_best)), f_best, where = 'post', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+    ax2.plot(x_best[:,0], x_best[:,1], '--', \
+          label = 'BO'+str(i)+'; #f_eval: ' + str(nbr_feval))
+ax1.legend()
+ax1.set_yscale('log')
+ax1.set_xlabel('Nbr. of function evaluations')
+ax1.set_ylabel('Best function evaluation')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.legend()
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+fig1.savefig('Quadratic_plots/Quadratic_BO_Convergence_plot.svg', format = "svg")
+fig2.savefig('Quadratic_plots/Quadratic_BO_2Dspace_plot.svg', format = "svg")
 
 fig1 = plt.figure()
 ax1 = fig1.add_subplot()
@@ -431,58 +436,113 @@ sol_SQSF = average_from_list(quadratic_SQSnobFit_list)
 test_SQSF, test_av_SQSF, test_min_SQSF, test_max_SQSF = sol_SQSF
 sol_DIR = average_from_list(quadratic_DIRECT_list)
 test_DIR, test_av_DIR, test_min_DIR, test_max_DIR = sol_DIR
-
+sol_BO = average_from_list(quadratic_Bayes_list)
+test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
-                test_max_CUATROg, color = 'b', alpha = .5)
+                test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
-                test_max_CUATROl, color = 'c', alpha = .5)
+                test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
-                test_max_SQSF, color = 'orange', alpha = .5)
+                test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
           label = 'PyBobyqa', c = 'green')
-# f_best = np.array(quadratic_Bayes_list[0]['f_best_so_far'])
-# ax.step(np.arange(len(f_best)), f_best, where = 'post', \
-#           label = 'BO', c = 'r')
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
+          label = 'BO', c = 'r')
+ax.fill_between(np.arange(1, 101), test_min_BO, \
+                test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])   
-fig.savefig('Quadratic_publication_plots/PromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])   
+fig.savefig('Quadratic_publication_plots/Quadratic_Model.svg', format = "svg")
  
     
 fig = plt.figure()
 ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Nest, where = 'post', label = 'Nesterov', c = 'brown')
 ax.fill_between(np.arange(1, 101), test_min_Nest, \
-                test_max_Nest, color = 'brown', alpha = .5)
+                test_max_Nest, color = 'brown', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
-                test_max_Splx, color = 'green', alpha = .5)
+                test_max_Splx, color = 'green', alpha = .5, step = 'post')
 ax.step(x_ind_findDiff, f_best_finDiff, where = 'post', \
-          label = 'Newton Fin. Diff.', c = 'black')
+          label = 'Newton', c = 'black')
 ax.step(x_ind_BFGS, f_best_BFGS, where = 'post', \
           label = 'BFGS', c = 'orange')
 ax.step(x_ind_Adam, f_best_Adam, where = 'post', \
           label = 'Adam', c = 'blue')   
 ax.step(np.arange(1, 101), test_av_DIR, where = 'post', label = 'DIRECT', c = 'violet')
 ax.fill_between(np.arange(1, 101), test_min_DIR, \
-                test_max_DIR, color = 'violet', alpha = .5)
-# ax.boxplot(test_BO, widths = 0.1, meanline = False, showfliers = False, manage_ticks = False)
-# ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
+                test_max_DIR, color = 'violet', alpha = .5, step = 'post')
 
 ax.legend()
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('Quadratic_publication_plots/NotSoPromisingMethods.svg', format = "svg")
+ax.set_xlim([1, 100])
+ax.legend(loc = 'upper right')
+fig.savefig('Quadratic_publication_plots/Quadratic_Others.svg', format = "svg")
+
+
+def medianx_from_list(solutions_list, x0):
+    N = len(solutions_list)
+    _, N_x = np.array(solutions_list[0]['x_best_so_far']).shape
+    f_best_all = np.zeros((N, 100))
+    x_best_all = np.zeros((N, 100, N_x))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_best = np.array(solutions_list[i]['x_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+                x_best_all[i,j,:] = np.array(x0)
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+                x_best_all[i,j,:] = np.array(x_best[ind][-1])
+    x_best_all
+    x_median = np.median(x_best_all, axis = 0)
+
+    return  x_median
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+CUATROl_med = medianx_from_list(quadratic_CUATRO_local_list, x0)
+CUATROg_med = medianx_from_list(quadratic_CUATRO_global_list, x0)
+Bayes_med = medianx_from_list(quadratic_Bayes_list, x0)
+DIRECT_med = medianx_from_list(quadratic_DIRECT_list, x0)
+
+ax2, fig2 = trust_fig(oracle, bounds)
+ax2.plot(CUATROl_med[:,0], CUATROl_med[:,1], label = 'CUATRO_l', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(CUATROg_med[:,0], CUATROg_med[:,1], label = 'CUATRO_g', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(Bayes_med[:,0], Bayes_med[:,1], label = 'Bayes. Opt.', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.plot(DIRECT_med[:,0], DIRECT_med[:,1], label = 'DIRECT', \
+            markersize = 4, alpha=.5, marker='o', linewidth = 2)
+ax2.scatter(x0[0], x0[1], label = 'Init. guess', marker = 'D', s = 40, c = 'k')
+ax2.set_xlabel('$x_1$')
+ax2.set_ylabel('$x_2$')
+ax2.set_xlim(bounds[0])
+ax2.set_ylim(bounds[1])
+ax2.legend()
+fig2.savefig('Quadratic_publication_plots/Quadratic_2D_convergence_best.svg', format = "svg")
 
 

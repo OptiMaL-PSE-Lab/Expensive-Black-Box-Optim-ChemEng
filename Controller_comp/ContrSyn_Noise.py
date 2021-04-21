@@ -126,6 +126,7 @@ for i in range(n_noise):
     f = lambda x: cost_control_noise(x, bounds_abs, noise_mat[i], N_SAA, \
                                     x0 = [.116, 368.489], N = 200, T = 20)
     for j in range(N_samples):
+        print(j+1)
         sol = CUATRO(f, x0, 0.5, bounds = bounds, max_f_eval = max_f_eval, \
                           N_min_samples = 6, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = j, method = 'global', \
@@ -165,9 +166,18 @@ data = {'Best function evaluation': convergence, \
         'Method': method}
 df = pd.DataFrame(data)
 
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 1.2}
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('ContrSyn_publication_plots/feval100Convergence.svg', format = "svg")
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=3)
+plt.tight_layout()
+plt.savefig('ContrSyn_publication_plots/ContrSyn_feval100Convergence.svg', format = "svg")
 # ax.set_ylim([0.1, 10])
 # ax.set_yscale("log")
 plt.show()
@@ -199,9 +209,10 @@ for i in range(n_noise):
     print('Iteration ', i+1, ' of CUATRO_g')
     best = []
     best_constr = []
-    f = lambda x: cost_control_noise(x, bounds_abs, noise_mat[i], N_SAA, \
+    f = lambda x: cost_control_noise(x, bounds_abs, noise_mat[4], N_SAA, \
                                     x0 = [.116, 368.489], N = 200, T = 20)
     for j in range(N_samples):
+        print(j+1)
         sol = CUATRO(f, x0, 0.5, bounds = bounds, max_f_eval = max_f_eval, \
                           N_min_samples = 6, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = j, method = 'global', \
@@ -232,18 +243,28 @@ convergence = list(itertools.chain(*ContrSynNoiseSAA_list_DIRECT)) + \
               list(itertools.chain(*ContrSynNoiseSAA_list_CUATROg)) + \
               list(itertools.chain(*ContrSynNoiseSAA_list_simplex))
               
-noise = list(itertools.chain(*noise_labels))*3
-method = ['DIRECT']*int(len(noise)/3) + ['CUATRO_g']*int(len(noise)/3) + \
-         ['Simplex']*int(len(noise)/3)
+noise = list(itertools.chain(*noise_labels)) + list(itertools.chain(*noise_labels[:4])) + \
+        list(itertools.chain(*noise_labels))                                         
+method = ['DIRECT']*N_samples*n_noise + ['CUATRO_g*']*N_samples*(n_noise-2) + \
+         ['Simplex']*N_samples*n_noise
 
 data = {'Best function evaluation': convergence, \
         "Noise standard deviation": noise, \
         'Method': method}
 df = pd.DataFrame(data)
 
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 1.2}
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('ContrSyn_publication_plots/SAA2feval50Convergence.svg', format = "svg")
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=3)
+plt.tight_layout()
+plt.savefig('ContrSyn_publication_plots/ContrSyn_SAA2feval50Convergence.svg', format = "svg")
 # ax.set_ylim([0.1, 10])
 # ax.set_yscale("log")
 plt.show()

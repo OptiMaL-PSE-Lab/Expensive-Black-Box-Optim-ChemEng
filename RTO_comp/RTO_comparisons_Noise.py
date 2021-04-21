@@ -76,8 +76,8 @@ for i in range(n_noise):
 x0 = [6.9, 83]
 bounds  = np.array([[4., 7.], [70., 100.]])
 
-# max_f_eval = 50 ; N_SAA = 1
-max_f_eval = 25 ; N_SAA = 2
+max_f_eval = 50 ; N_SAA = 1
+# max_f_eval = 25 ; N_SAA = 2
 max_it = 100
 
 #CUATRO local, CUATRO global, SQSnobFit, Bayes
@@ -109,7 +109,7 @@ for i in range(n_noise):
     best_constr = []
     for j in range(N_samples):
         f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
-        sol = CUATRO(f, x0, 1, bounds = bounds, max_f_eval = max_f_eval, \
+        sol = CUATRO(f, x0, 2, bounds = bounds, max_f_eval = max_f_eval, \
                           N_min_samples = 6, tolerance = 1e-10,\
                           beta_red = 0.9, rnd = j, method = 'local', \
                           constr_handling = 'Fitting')
@@ -124,7 +124,7 @@ for i in range(n_noise):
 N_samples = 20
 RTONoise_list_CUATROg = []
 RTOConstraint_list_CUATROg = []
-init_radius = 2
+init_radius = 10
 for i in range(n_noise):
     print('Iteration ', i+1, ' of CUATRO_g')
     best = []
@@ -179,23 +179,190 @@ ft = int(15)
 font = {'size': ft}
 plt.rc('font', **font)
 params = {'legend.fontsize': 12.5,
-              'legend.handlelength': 2}
+              'legend.handlelength': 1.2}
 plt.rcParams.update(params)
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
-plt.savefig('Publication plots/SAA2feval25Convergence.svg', format = "svg")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.legend([])
+# plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_feval50Convergence.svg', format = "svg")
+plt.show()
 # ax.set_ylim([0.1, 10])
 # ax.set_yscale("log")
+plt.clf()
+
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+# plt.legend([])
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=4)
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_feval50ConvergenceLabel.svg', format = "svg")
 plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
 plt.clf()
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", fliersize = 0)
-
 ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
                     hue = "Method", data = df, palette = "muted", dodge = True)
+plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_feval50Constraints.svg', format = "svg")
+plt.show()
+plt.clf()
 
-plt.savefig('Publication plots/SAA2feval25Constraints.svg', format = "svg")
+max_f_eval = 25 ; N_SAA = 2
+max_it = 100
+
+#CUATRO local, CUATRO global, SQSnobFit, Bayes
+
+N_samples = 20
+RTOSAANoise_list_SQSF = []
+RTOSAAConstraint_list_SQSF = []
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of SQSnobfit')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
+        sol = SQSnobFitWrapper().solve(f, x0, bounds, mu_con = 1e6, \
+                                    maxfun = max_f_eval, constraints=2)
+        best.append(sol['f_best_so_far'][-1])
+        _, g = RTO_Noise(sol['x_best_so_far'][-1], 0, N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RTOSAANoise_list_SQSF.append(best)
+    RTOSAAConstraint_list_SQSF.append(best_constr)
+
+# N_SAA = 1
+N_samples = 20
+RTOSAANoise_list_CUATROl = []
+RTOSAAConstraint_list_CUATROl = []
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of CUATRO_l')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
+        sol = CUATRO(f, x0, 2, bounds = bounds, max_f_eval = max_f_eval, \
+                          N_min_samples = 6, tolerance = 1e-10,\
+                          beta_red = 0.9, rnd = j, method = 'local', \
+                          constr_handling = 'Fitting')
+        best.append(sol['f_best_so_far'][-1])
+        _, g = RTO_Noise(sol['x_best_so_far'][-1], 0, N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RTOSAANoise_list_CUATROl.append(best)
+    RTOSAAConstraint_list_CUATROl.append(best_constr)
+    
+    
+# N_SAA = 1
+N_samples = 20
+RTOSAANoise_list_CUATROg = []
+RTOSAAConstraint_list_CUATROg = []
+init_radius = 10
+for i in range(n_noise):
+    print('Iteration ', i+1, ' of CUATRO_g')
+    best = []
+    best_constr = []
+    for j in range(N_samples):
+        f = lambda x: RTO_Noise(x, noise_mat[i], N_SAA)
+        sol = CUATRO(f, x0, init_radius, bounds = bounds, max_f_eval = max_f_eval, \
+                          N_min_samples = 15, tolerance = 1e-10,\
+                          beta_red = 0.9, rnd = j, method = 'global', \
+                          constr_handling = 'Discrimination')
+        best.append(sol['f_best_so_far'][-1])
+        _, g = RTO_Noise(sol['x_best_so_far'][-1], 0, N_SAA)
+        best_constr.append(np.sum(np.maximum(g, 0)))
+    RTOSAANoise_list_CUATROg.append(best)
+    RTOSAAConstraint_list_CUATROg.append(best_constr)
+    
+
+with open('BayesRTO_listNoiseConvSAA.pickle', 'rb') as handle:
+    RTOSAANoise_list_Bayes = pickle.load(handle)
+    
+with open('BayesRTO_listNoiseConstrSAA.pickle', 'rb') as handle:
+    RTOSAAConstraint_list_Bayes = pickle.load(handle)
+
+
+noise = ['%.3f' % noise_mat[i] for i in range(n_noise)]
+noise_labels = [[noise[i]]*N_samples for i in range(n_noise)]
+
+
+convergence = list(itertools.chain(*RTOSAANoise_list_SQSF)) + \
+              list(itertools.chain(*RTOSAANoise_list_CUATROl)) + \
+              list(itertools.chain(*RTOSAANoise_list_CUATROg)) + \
+              list(itertools.chain(*RTOSAANoise_list_Bayes))    
+              
+constraints = list(itertools.chain(*RTOSAAConstraint_list_SQSF)) + \
+              list(itertools.chain(*RTOSAAConstraint_list_CUATROl)) + \
+              list(itertools.chain(*RTOSAAConstraint_list_CUATROg)) + \
+              list(itertools.chain(*RTOSAAConstraint_list_Bayes))   
+              
+noise = list(itertools.chain(*noise_labels))*4
+method = ['SQSnobfit']*int(len(noise)/4) + ['CUATRO_l']*int(len(noise)/4) + \
+         ['CUATRO_g']*int(len(noise)/4) + ['Bayes Opt.']*int(len(noise)/4)
+
+data = {'Best function evaluation': convergence, \
+        "Constraint violation": constraints, \
+        "Noise standard deviation": noise, \
+        'Method': method}
+df = pd.DataFrame(data)
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 1.2}
+plt.rcParams.update(params)
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.legend([])
+# plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_SAA2feval25Convergence.svg', format = "svg")
+plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.clf()
+
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+# plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+# plt.legend([])
+plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                mode="expand", borderaxespad=0, ncol=4)
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_SAA2feval25ConvergenceLabel.svg', format = "svg")
+plt.show()
+# ax.set_ylim([0.1, 10])
+# ax.set_yscale("log")
+plt.clf()
+
+ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", fliersize = 0)
+ax = sns.stripplot(x = "Noise standard deviation", y = "Constraint violation", \
+                    hue = "Method", data = df, palette = "muted", dodge = True)
+plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+plt.tight_layout()
+plt.savefig('Publication plots/RTO_SAA2feval25Constraints.svg', format = "svg")
+plt.show()
+plt.clf()
+
+
+
+
+
+
+
 
 
 

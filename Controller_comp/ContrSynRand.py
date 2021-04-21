@@ -54,7 +54,7 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
-def plot_reactor_respRand(pi, plot, method, bounds, noise, x0 = [.6, 310], 
+def plot_reactor_respRand(pi, plot, method, bounds, noise, c, x0 = [.6, 310], 
                           xref = [.666, 308.489], N=200, T=8,  NS = False):
     
     ax1, ax2, ax3, ax4 = plot
@@ -66,16 +66,31 @@ def plot_reactor_respRand(pi, plot, method, bounds, noise, x0 = [.6, 310],
                                     T = T, return_sys_resp = True)
     
     x1 = np.array(sys_resp)[:,0] ; x2 = np.array(sys_resp)[:,1]
-    ax1.plot(np.arange(len(x1))/len(x1)*T, x1, label = method + ': $x_1$')
+    ax1.plot(np.arange(len(x1))/len(x1)*T, x1, c = c, label = method )
     ax1.plot([0, T], [xref[0], xref[0]], '--k')
     ax2.plot([0, T], [xref[1], xref[1]], '--k')
-    ax2.plot(np.arange(len(x2))/len(x2)*T, x2, label =  method + ': $x_2$')
+    ax2.plot(np.arange(len(x2))/len(x2)*T, x2, c = c)
 
     
     u1 = np.array(control_resp)[:,0] ; u2 = np.array(control_resp)[:,1]
-    ax3.plot(np.arange(len(u1))/len(u1)*T, u1, label = method + ': $u_1$')
-    ax4.plot(np.arange(len(u2))/len(u2)*T, u2, label = method + ': $u_2$')
+    ax3.plot(np.arange(len(u1))/len(u1)*T, u1, c = c, label = method )
+    ax4.plot(np.arange(len(u2))/len(u2)*T, u2, c=c)
     return ax1, ax2, ax3, ax4
+
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
 
 def cost_control_noise(x, bounds_abs, noise, N_SAA, x0 = [.116, 368.489], \
                        N = 200, T = 20, NS = False):
@@ -110,7 +125,7 @@ x0 = (np.array(pi_init) - bounds_abs[:,0]) / (bounds_abs[:,1]-bounds_abs[:,0])
 
 N_SAA = 1
 
-noise = [.001, 1]
+noise = np.array([.001, 1])/3
 
 cost_rand = lambda x: cost_control_noise(x, bounds_abs, noise, N_SAA, \
                                     x0 = [.116, 368.489], N = 200, T = 20)
@@ -120,7 +135,7 @@ bounds = np.array([[0, 1]]*10)
  
 x0 = (np.array(pi_init) - bounds_abs[:,0]) / (bounds_abs[:,1]-bounds_abs[:,0]) 
 
-
+initial_outputRand = cost_rand(x0)
 
 x0_abs = np.array(pi_init)
 
@@ -135,7 +150,8 @@ for i in range(N):
     rnd_seed = i
     ContrSynRand_pybobyqa = PyBobyqaWrapper().solve(cost_rand, x0, bounds=bounds.T, \
                                       maxfun= max_f_eval, constraints=1, \
-                                      seek_global_minimum = True)
+                                      seek_global_minimum = True, \
+                                      objfun_has_noise = True)
     ContrSynRand_pybobyqa_list.append(ContrSynRand_pybobyqa)
 print('10 Py-BOBYQA iterations completed')
     
@@ -153,7 +169,7 @@ ContrSynRand_FiniteDiff_list = []
 for i in range(N):
     rnd_seed = i
     ContrSynRand_FiniteDiff = finite_Diff_Newton(cost_randNS, x0_abs, bounds = bounds_abs, \
-                                    con_weight = 1e6)
+                                    con_weight = 1e6, check_bounds = True)
     ContrSynRand_FiniteDiff_list.append(ContrSynRand_FiniteDiff)
 print('10 Approx Newton iterations completed')
 
@@ -162,7 +178,7 @@ ContrSynRand_BFGS_list = []
 for i in range(N):
     rnd_seed = i
     ContrSynRand_BFGS = BFGS_optimizer(cost_randNS, x0_abs, bounds = bounds_abs, \
-                                con_weight = 1e6)
+                                con_weight = 1e6, check_bounds = True)
     ContrSynRand_BFGS_list.append(ContrSynRand_BFGS)
 print('10 BFGS iterations completed')
 
@@ -174,7 +190,8 @@ for i in range(N):
     ContrSynRand_Adam = Adam_optimizer(cost_rand, x0, method = 'forward', \
                                       bounds = bounds, alpha = 0.4, \
                                       beta1 = 0.2, beta2  = 0.1, \
-                                      max_f_eval = 100, con_weight = 1e6)
+                                      max_f_eval = 100, con_weight = 1e6, \
+                                      check_bounds = True)
     ContrSynRand_Adam_list.append(ContrSynRand_Adam)
 print('10 Adam iterations completed')
  
@@ -215,6 +232,10 @@ for i in range(N):
     ContrSynRand_SQSnobFit_list.append(ContrSynRand_SQSnobFit)
 print('10 SnobFit iterations completed') 
 
+### SQSnobfit tends to fail, so manually add failure:
+# dict_fail = {}
+# dict_fail['x_best_so_far'] = 
+
 N = 10
 ContrSynRand_DIRECT_list = []
 for i in range(N):
@@ -226,6 +247,17 @@ print('10 DIRECT iterations completed')
 with open('BayesContrSynRand_list.pickle', 'rb') as handle:
     ContrSynRand_Bayes_list = pickle.load(handle)
 
+ContrSynRand_Bayes_list = fix_starting_points(ContrSynRand_Bayes_list, x0, initial_outputRand)
+ContrSynRand_DIRECT_list = fix_starting_points(ContrSynRand_DIRECT_list, x0, initial_outputRand)
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
 
 
 fig1 = plt.figure()
@@ -419,7 +451,7 @@ ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
                 test_max_pybbqa, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
+ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit*', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
@@ -428,8 +460,11 @@ ax.fill_between(np.arange(1, 101), test_min_BO, \
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])    
-fig.savefig('ContrSyn_random_plots/PromisingMethodsRand.svg', format = "svg")
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
+ax.set_xlim([1, 100])    
+ax.legend(loc = 'upper right')
+fig.savefig('ContrSyn_publication_plots/ContrSyn_Model.svg', format = "svg")
 
 
 fig = plt.figure()
@@ -440,10 +475,10 @@ ax = fig.add_subplot()
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
                 test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
                 test_max_findiff, color = 'grey', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
+ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'BFGS', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_BFGS, \
                 test_max_BFGS, color = 'orange', alpha = .5)
 ax.step(np.arange(1, 101), test_av_Adam, where = 'post', label = 'Adam ', c = 'blue')
@@ -455,32 +490,125 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlim([0, 99])
-fig.savefig('ContrSyn_random_plots/NotSoPromisingMethodsRand.svg', format = "svg")
+ax.set_xlabel('Nbr. of function evaluations')
+ax.set_ylabel('Best function evaluation')
+ax.set_xlim([1, 100])
+ax.legend(loc = 'upper right')
+fig.savefig('ContrSyn_publication_plots/ContrSyn_Others.svg', format = "svg")
 
 
+
+def medianx_from_list(solutions_list, x0):
+    N = len(solutions_list)
+    _, N_x = np.array(solutions_list[0]['x_best_so_far']).shape
+    f_best_all = np.zeros((N, 100))
+    x_best_all = np.zeros((N, 100, N_x))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_best = np.array(solutions_list[i]['x_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+                x_best_all[i,j,:] = np.array(x0)
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+                x_best_all[i,j,:] = np.array(x_best[ind][-1])
+    x_best_all
+    x_median = np.median(x_best_all, axis = 0)
+
+    return  x_median
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12,
+              'legend.handlelength': 1.2}
+plt.rcParams.update(params)
 
 fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
+# noise_red = np.array(noise)/3
 
 method = 'Init'
 plot = (ax1, ax2, ax4, ax5)
-plot = plot_reactor_respRand(x0, plot, method, bounds_abs, noise, x0 = [.116, 368.489], 
-                             N = 200*5, T = 20)
-method = 'DIRECT'
-pi = ContrSynRand_DIRECT_list[9]['x_best_so_far'][-1]
-plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, x0 = [.116, 368.489],
-                             N = 200*5, T = 20)
-method = 'SQSnobfit'
-pi = absolute_to_scaled(ContrSynRand_SQSnobFit_list[5]['x_best_so_far'][-1], bounds_abs)
-plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, x0 = [.116, 368.489],
+plot = plot_reactor_respRand(x0, plot, method, bounds_abs, noise, 'red', x0 = [.116, 368.489], 
                               N = 200*5, T = 20)
-ax1.legend() ; ax2.legend() ; ax4.legend() ; ax5.legend()
+method = 'DIRECT'
+pi = medianx_from_list(ContrSynRand_DIRECT_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, 'purple', x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
+method = 'CUATRO_g'
+pi = medianx_from_list(ContrSynRand_CUATRO_global_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, 'blue', x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
+# method = 'CUATRO_l'
+# pi = medianx_from_list(ContrSynRand_CUATRO_local_list, x0)[-1]
+# plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, 'c', x0 = [.116, 368.489],
+#                               N = 200*5, T = 20)
+method = 'Simplex'
+pi = medianx_from_list(ContrSynRand_simplex_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, 'green', x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
 
-fig1.savefig('ContrSyn_random_plots/ContrTrajStatesRand.svg', format = "svg")
-fig3.savefig('ContrSyn_random_plots/ContrTrajControlsRand.svg', format = "svg")
+ax1.set_xlabel('Time [s]') ; ax1.set_ylabel(r'$c_A$ [$\frac{mol}{L}$]')
+ax2.set_xlabel('Time [s]') ; ax2.set_ylabel(r'$T$ [K]')
+ax4.set_xlabel('Time [s]') ; ax4.set_ylabel(r'$\frac{F_{in} - F_{in,ss}}{V}$ [$\frac{mol}{s.L}$]')
+ax5.set_xlabel('Time [s]') ; ax5.set_ylabel(r'$T_{in} - T_{in,ss}$ [K]')
+
+fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+fig1.tight_layout() ; fig3.tight_layout()
+
+
+fig1.savefig('ContrSyn_publication_plots/ContrSyn_TrajStatesRand.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('ContrSyn_publication_plots/ContrSyn_TrajControlsRand.svg', format = "svg", bbox_inches='tight')
+
+
+
+fig1, fig3 = plt.figure(), plt.figure()
+ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
+ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
+
+method = 'Init'
+plot = (ax1, ax2, ax4, ax5)
+plot = plot_reactor_respRand(x0, plot, method, bounds_abs, [0, 0], 'red', x0 = [.116, 368.489], 
+                              N = 200*5, T = 20)
+method = 'DIRECT'
+pi = medianx_from_list(ContrSynRand_DIRECT_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'purple', x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
+method = 'CUATRO_g'
+pi = medianx_from_list(ContrSynRand_CUATRO_global_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'blue',x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
+# method = 'CUATRO_l'
+# pi = medianx_from_list(ContrSynRand_CUATRO_local_list, x0)[-1]
+# plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'c',x0 = [.116, 368.489],
+#                               N = 200*5, T = 20)
+method = 'Simplex'
+pi = medianx_from_list(ContrSynRand_simplex_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'green', x0 = [.116, 368.489],
+                              N = 200*5, T = 20)
+
+
+ax1.set_xlabel('Time [s]') ; ax1.set_ylabel(r'$c_A$ [$\frac{mol}{L}$]')
+ax2.set_xlabel('Time [s]') ; ax2.set_ylabel(r'$T$ [K]')
+ax4.set_xlabel('Time [s]') ; ax4.set_ylabel(r'$\frac{F_{in} - F_{in,ss}}{V}$ [$\frac{mol}{s.L}$]')
+ax5.set_xlabel('Time [s]') ; ax5.set_ylabel(r'$T_{in} - T_{in,ss}$ [K]')
+
+fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+fig1.tight_layout() ; fig3.tight_layout()
+
+
+fig1.savefig('ContrSyn_publication_plots/ContrSyn_TrajStatesDet.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('ContrSyn_publication_plots/ContrSyn_TrajControlsDet.svg', format = "svg", bbox_inches='tight')
+
 
 
 
@@ -488,22 +616,82 @@ fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
+noise_red = np.array(noise)/5
+
 method = 'Init'
 plot = (ax1, ax2, ax4, ax5)
-plot = plot_reactor_respRand(x0, plot, method, bounds_abs, [0, 0], x0 = [.116, 368.489], 
-                             N = 200*5, T = 20)
+plot = plot_reactor_respRand(x0, plot, method, bounds_abs, noise_red, 'red', x0 = [.8, 300], 
+                              N = 200*5, T = 20)
 method = 'DIRECT'
-pi = ContrSynRand_DIRECT_list[9]['x_best_so_far'][-1]
-plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], x0 = [.116, 368.489],
-                             N = 200*5, T = 20)
-method = 'SQSnobfit'
-pi = absolute_to_scaled(ContrSynRand_SQSnobFit_list[5]['x_best_so_far'][-1], bounds_abs)
-plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], x0 = [.116, 368.489],
-                             N = 200*5, T = 20)
-ax1.legend() ; ax2.legend() ; ax4.legend() ; ax5.legend()
+pi = medianx_from_list(ContrSynRand_DIRECT_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise_red, 'purple', x0 = [.8, 300],
+                              N = 200*5, T = 20)
+method = 'CUATRO_g'
+pi = medianx_from_list(ContrSynRand_CUATRO_global_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise_red, 'blue', x0 = [.8, 300],
+                              N = 200*5, T = 20)
+# method = 'CUATRO_l'
+# pi = medianx_from_list(ContrSynRand_CUATRO_local_list, x0)[-1]
+# plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise, 'c', x0 = [.8, 300],
+#                               N = 200*5, T = 20)
+method = 'Simplex'
+pi = medianx_from_list(ContrSynRand_simplex_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, noise_red, 'green', x0 = [.8, 300],
+                              N = 200*5, T = 20)
 
-fig1.savefig('ContrSyn_random_plots/ContrTrajStatesDet.svg', format = "svg")
-fig3.savefig('ContrSyn_random_plots/ContrTrajControlsDet.svg', format = "svg")
+ax1.set_xlabel('Time [s]') ; ax1.set_ylabel(r'$c_A$ [$\frac{mol}{L}$]')
+ax2.set_xlabel('Time [s]') ; ax2.set_ylabel(r'$T$ [K]')
+ax4.set_xlabel('Time [s]') ; ax4.set_ylabel(r'$\frac{F_{in} - F_{in,ss}}{V}$ [$\frac{mol}{s.L}$]')
+ax5.set_xlabel('Time [s]') ; ax5.set_ylabel(r'$T_{in} - T_{in,ss}$ [K]')
+
+fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+fig1.tight_layout() ; fig3.tight_layout()
+
+
+fig1.savefig('ContrSyn_publication_plots/ContrSyn_OtherTrajStatesRand.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('ContrSyn_publication_plots/ContrSyn_OtherTrajControlsRand.svg', format = "svg", bbox_inches='tight')
+
+
+
+fig1, fig3 = plt.figure(), plt.figure()
+ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
+ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
+
+method = 'Init'
+plot = (ax1, ax2, ax4, ax5)
+plot = plot_reactor_respRand(x0, plot, method, bounds_abs, [0, 0], 'red', x0 = [.8, 300], 
+                              N = 200*5, T = 20)
+method = 'DIRECT'
+pi = medianx_from_list(ContrSynRand_DIRECT_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'purple', x0 = [.8, 300],
+                              N = 200*5, T = 20)
+method = 'CUATRO_g'
+pi = medianx_from_list(ContrSynRand_CUATRO_global_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'blue',x0 = [.8, 300],
+                              N = 200*5, T = 20)
+# method = 'CUATRO_l'
+# pi = medianx_from_list(ContrSynRand_CUATRO_local_list, x0)[-1]
+# plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'c',x0 = [.116, 368.489],
+#                               N = 200*5, T = 20)
+method = 'Simplex'
+pi = medianx_from_list(ContrSynRand_simplex_list, x0)[-1]
+plot = plot_reactor_respRand(pi, plot, method, bounds_abs, [0, 0], 'green', x0 = [.8, 300],
+                              N = 200*5, T = 20)
+
+
+ax1.set_xlabel('Time [s]') ; ax1.set_ylabel(r'$c_A$ [$\frac{mol}{L}$]')
+ax2.set_xlabel('Time [s]') ; ax2.set_ylabel(r'$T$ [K]')
+ax4.set_xlabel('Time [s]') ; ax4.set_ylabel(r'$\frac{F_{in} - F_{in,ss}}{V}$ [$\frac{mol}{s.L}$]')
+ax5.set_xlabel('Time [s]') ; ax5.set_ylabel(r'$T_{in} - T_{in,ss}$ [K]')
+
+fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+fig1.tight_layout() ; fig3.tight_layout()
+
+
+fig1.savefig('ContrSyn_publication_plots/ContrSyn_OtherTrajStatesDet.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('ContrSyn_publication_plots/ContrSyn_OtherTrajControlsDet.svg', format = "svg", bbox_inches='tight')
 
 
 

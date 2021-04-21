@@ -32,17 +32,20 @@ def is_in_bounds(x, bounds):
 def find_t(t, x0, delta_x, bounds, beta):
     x = x0 + t*delta_x
     i = 0
-    while (not is_in_bounds(x, bounds)) and i < 10:
+    while (not is_in_bounds(x, bounds)) and i < 100:
         t *= beta
         x = x0 + t*delta_x
         i += 1
     return x, t
 
 def backtracking(sim, x, delta_x, x_list, f_list, g_list, current_f, gradient, \
-                 constraints, bounds, alpha = 0.1, beta = 0.25, con_weight = 100):
+                 constraints, bounds, alpha = 0.1, beta = 0.25, con_weight = 100, \
+                  check_bounds = False):
     t = 1
-    # x_new, t = find_t(1, x, delta_x, bounds, beta)
-    x_new = x + t*delta_x
+    if check_bounds:
+        x_new, t = find_t(1, x, delta_x, bounds, beta)
+    else:
+        x_new = x + t*delta_x
     # print('t: ', t)
     f_lhs, g_lhs = sim(x_new)
     x_list += [x_new.tolist()]
@@ -200,7 +203,7 @@ def finite_differences(sim, x, x_list, f_list, g_list, constraints, h = 0.001,  
 
 def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
                       max_f_eval = 100, max_iter = 100, tolerance = 1e-8, \
-                      con_weight = 100):
+                      con_weight = 100, check_bounds = False):
     
     constraints = []
     
@@ -248,7 +251,8 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
     
     x_list, f_list, g_list = backtracking(sim, x, update, x_list, f_list, g_list, \
                                           curr_f, gradient, constraints, bounds, \
-                                          con_weight = con_weight)
+                                          con_weight = con_weight, \
+                                          check_bounds = check_bounds)
     
     # print(x_list[-1], f_list[-1], g_list[-1])
     
@@ -278,7 +282,8 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
        x_list, f_list, g_list = backtracking(sim, x, update, x_list, f_list, \
                                              g_list, curr_f, gradient, \
                                              constraints, bounds, \
-                                             con_weight = con_weight)
+                                             con_weight = con_weight, \
+                                             check_bounds = check_bounds)
        
         # print(x_list[-1], f_list[-1], g_list[-1])
     
@@ -306,7 +311,7 @@ def finite_Diff_Newton(sim, x0, step_size = 1, bounds = None, \
 def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
                    alpha = 1e-3, beta1 = 0.9, beta2 = 0.99, epsilon = 1e-8, \
                    max_f_eval = 100, max_iter = 100, tolerance = 1e-8, \
-                   con_weight = 100, print_status = True):
+                   con_weight = 100, print_status = True, check_bounds = False):
     
     constraints = []
     
@@ -368,7 +373,8 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
        x_list, f_list, g_list = backtracking(sim, x, update, x_list, f_list, \
                                              g_list, curr_f, gradient, \
                                              constraints, bounds, \
-                                             con_weight = con_weight)
+                                             con_weight = con_weight, \
+                                             check_bounds = check_bounds)
            
        # if t == 1:
        #     print(x_list[-1], f_list[-1], g_list[-1])
@@ -413,7 +419,8 @@ def Adam_optimizer(sim, x0, bounds = None, method = 'forward', \
 
 def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
                    max_f_eval = 100, max_iter = 100, tolerance = 1e-8, \
-                   con_weight = 100, stepsize = 1, print_status = True):
+                   con_weight = 100, stepsize = 1, print_status = True, \
+                   check_bounds = False):
    
     constraints = []
     
@@ -462,7 +469,8 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     
     x_list, f_list, g_list = backtracking(sim, x, stepsize*s.reshape(len(x0),) , \
                                           x_list, f_list, g_list, \
-                                          curr_f, gradient, constraints, bounds)
+                                          curr_f, gradient, constraints, bounds, \
+                                          check_bounds = check_bounds)
     # print(x_list[-1], f_list[-1], g_list[-1])
     # x_list += [x.tolist()]
     # f_list += [f(x)]
@@ -507,7 +515,8 @@ def BFGS_optimizer(sim, x0, bounds = None, method = 'forward', \
     
        x_list, f_list, g_list = backtracking(sim, x, stepsize*s.reshape(len(x0),), \
                                              x_list, f_list, g_list, \
-                                             curr_f, gradient, constraints, bounds)
+                                             curr_f, gradient, constraints, bounds, \
+                                             check_bounds = check_bounds)
        # print(x_list[-1], f_list[-1], g_list[-1])
         # x_list += [x.tolist()]
         # f_list += [f(x)]

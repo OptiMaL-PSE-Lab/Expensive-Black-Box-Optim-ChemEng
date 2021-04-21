@@ -65,6 +65,21 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
+def fix_starting_points(complete_list, x0, init_out):
+    for i in range(len(complete_list)):
+        dict_out = complete_list[i]
+        f_arr = dict_out['f_best_so_far']
+        N_eval = len(f_arr)
+        g_arr = dict_out['g_best_so_far']
+        
+        for j in range(N_eval):
+            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+               dict_out['x_best_so_far'][j] = np.array(x0)
+               dict_out['f_best_so_far'][j] = init_out[0]
+               dict_out['g_best_so_far'][j] = np.array(init_out[1])
+        complete_list[i] = dict_out
+    return complete_list
+
 def RTO_SAA(x):
     # x = extract_FT(x)
     N_SAA = 5
@@ -96,6 +111,7 @@ bounds  = np.array([[4., 7.], [70., 100.]])
 max_f_eval = 100
 max_it = 100
 
+initial_outputSAA = RTO_SAA(x0)
 
 N = 10
 RTOSAA_pybbqa_list = []
@@ -103,6 +119,7 @@ for i in range(N):
     RTOSAA_pybobyqa = PyBobyqaWrapper().solve(RTO_SAA, x0, bounds=bounds.T, \
                                               maxfun= max_f_eval, constraints=2, \
                                               seek_global_minimum = True, \
+                                              objfun_has_noise=True, \
                                               scaling_within_bounds = True, \
                                               mu_con = 1e6)
     RTOSAA_pybbqa_list.append(RTOSAA_pybobyqa)   
@@ -206,6 +223,8 @@ print('10 CUATRO local iterations completed')
 with open('BayesRTO_listRandSAA.pickle', 'rb') as handle:
     RTOSAA_Bayes_list = pickle.load(handle)
 
+RTOSAA_Bayes_list = fix_starting_points(RTOSAA_Bayes_list, x0, initial_outputSAA)
+RTOSAA_DIRECT_list = fix_starting_points(RTOSAA_DIRECT_list, x0, initial_outputSAA)
 
 plant = WO_system()
 
@@ -478,13 +497,13 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5)
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5)
-ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
+ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'PyBOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
                 test_max_pybbqa, color = 'green', alpha = .5)
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
@@ -498,8 +517,9 @@ ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])    
-fig.savefig('Publication plots/PromisingMethodsSAA.svg', format = "svg")
+ax.set_xlim([1, 100])    
+fig.savefig('Publication plots/RTOSAA_Model.svg', format = "svg")
+
 
 
 fig = plt.figure()
@@ -510,7 +530,7 @@ ax.fill_between(np.arange(1, 101), test_min_Nest, \
 ax.step(np.arange(1, 101), test_av_Splx, where = 'post', label = 'Simplex', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_Splx, \
                 test_max_Splx, color = 'green', alpha = .5)
-ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Approx. Newton', c = 'grey')
+ax.step(np.arange(1, 101), test_av_findiff, where = 'post', label = 'Newton', c = 'grey')
 ax.fill_between(np.arange(1, 101), test_min_findiff, \
                 test_max_findiff, color = 'grey', alpha = .5)
 # ax.step(np.arange(1, 101), test_av_BFGS, where = 'post', label = 'Approx. BFGS', c = 'orange')
@@ -528,7 +548,8 @@ ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([0, 99])
-fig.savefig('Publication plots/NotSoPromisingMethodsSAA.svg', format = "svg")
+ax.legend(loc = 'upper right')
+ax.set_xlim([1, 100])
+fig.savefig('Publication plots/RTOSAA_Others.svg', format = "svg")
 
 
