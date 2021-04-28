@@ -64,20 +64,35 @@ def average_from_list(solutions_list):
     f_min = np.min(f_best_all, axis = 0)
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
-
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+       
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def RTO_SAA(x):
@@ -225,6 +240,8 @@ with open('BayesRTO_listRandSAA.pickle', 'rb') as handle:
 
 RTOSAA_Bayes_list = fix_starting_points(RTOSAA_Bayes_list, x0, initial_outputSAA)
 RTOSAA_DIRECT_list = fix_starting_points(RTOSAA_DIRECT_list, x0, initial_outputSAA)
+RTOSAA_simplex_list = fix_starting_points(RTOSAA_simplex_list, x0, initial_outputSAA)
+RTOSAA_pybbqa_list = fix_starting_points(RTOSAA_pybbqa_list, x0, initial_outputSAA)
 
 plant = WO_system()
 
@@ -503,21 +520,22 @@ ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
 ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5)
-ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'PyBOBYQA ', c = 'green')
+ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
 ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
                 test_max_pybbqa, color = 'green', alpha = .5)
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
-          label = 'BO', c = 'r')
+          label = 'Bayes. Opt.', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'r', alpha = .5)
 ax.legend()
 # ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([1, 100])    
+ax.set_xlim([1, 100])   
+ax.set_ylim([-85, 75])   
 fig.savefig('Publication plots/RTOSAA_Model.svg', format = "svg")
 
 
@@ -550,6 +568,7 @@ ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.legend(loc = 'upper right')
 ax.set_xlim([1, 100])
+ax.set_ylim([-85, 75])  
 fig.savefig('Publication plots/RTOSAA_Others.svg', format = "svg")
 
 

@@ -86,19 +86,34 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def Problem_quadraticSAA(x):
@@ -234,6 +249,8 @@ with open('BayesQuadratic_listRandSAA.pickle', 'rb') as handle:
 
 quadraticSAA_Bayes_list = fix_starting_points(quadraticSAA_Bayes_list, x0, initial_outputSAA)
 quadraticSAA_DIRECT_list = fix_starting_points(quadraticSAA_DIRECT_list, x0, initial_outputSAA)
+quadraticSAA_simplex_list = fix_starting_points(quadraticSAA_simplex_list, x0, initial_outputSAA)
+quadraticSAA_pybbqa_list = fix_starting_points(quadraticSAA_pybbqa_list, x0, initial_outputSAA)
 
 quadratic_f = lambda x, y: x**2 + 10*y**2 + x*y
 quadratic_g = lambda x, y: 1 - x - y <= 0
@@ -519,10 +536,10 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
@@ -532,7 +549,7 @@ ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
-          label = 'BO', c = 'r')
+          label = 'Bayes. Opt.', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'r', alpha = .5, step = 'post')
 ## BO placeholder: red
@@ -542,6 +559,7 @@ ax.set_yscale('log')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_xlim([1, 100])    
+ax.set_ylim([0.8, 15])  
 fig.savefig('Quadratic_publication_plots/QuadraticSAA_Model.svg', format = "svg")
 
 
@@ -573,6 +591,7 @@ ax.legend(loc = 'upper right')
 ax.set_xlabel('Nbr. of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_xlim([1, 100])
+ax.set_ylim([0.8, 15])  
 fig.savefig('Quadratic_publication_plots/QuadraticSAA_Others.svg', format = "svg")
 
 

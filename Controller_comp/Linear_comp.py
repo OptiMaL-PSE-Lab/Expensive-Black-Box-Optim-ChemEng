@@ -47,19 +47,34 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def plot_sys_resp(pi, plot, method, x0 = [15, 15], xref = [10, 10], N=200, T=3):
@@ -171,7 +186,10 @@ with open('BayesContrLin_list.pickle', 'rb') as handle:
 
 ContrLin_Bayes_list = fix_starting_points(ContrLin_Bayes_list, x0, initial_output)
 ContrLin_DIRECT_list = fix_starting_points(ContrLin_DIRECT_list, x0, initial_output)
-
+ContrLin_simplex_list = fix_starting_points(ContrLin_simplex_list, x0, initial_output)
+ContrLin_pybobyqa['x_best_so_far'][0] = np.array(x0)
+ContrLin_pybobyqa['f_best_so_far'][0] = initial_output[0]
+ContrLin_pybobyqa['g_best_so_far'][0] = np.array(initial_output[1])
 
 plt.rcParams["font.family"] = "Times New Roman"
 ft = int(15)
@@ -335,26 +353,27 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit*', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
-          label = 'PyBobyqa', c = 'green')
-ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
+          label = 'Py-BOBYQA', c = 'green')
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.', c = 'red')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'red', alpha = .5, step = 'post')
 
 ax.legend()
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
 ax.set_xlim([1, 100])  
+ax.set_ylim([500, 35000])  
 ax.legend(loc = 'upper right') 
 fig.savefig('Controller_publication_plots/ContrLin_Model.svg', format = "svg")
  
@@ -380,17 +399,13 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 # ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
 
 ax.legend()
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
 ax.legend(loc = 'upper right')
 ax.set_xlim([1, 100])
+ax.set_ylim([500, 35000])  
 fig.savefig('Controller_publication_plots/ContrLin_Others.svg', format = "svg")
-
-
-fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
-ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
-ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
 
 def medianx_from_list(solutions_list, x0):
@@ -450,7 +465,7 @@ fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_ContrLin_resp(x0, plot, method, bounds, 'r')
 method = 'DIRECT'
@@ -493,7 +508,7 @@ fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_ContrLin_resp(x0, plot, method, bounds, 'r', x0 = [20, 0])
 method = 'DIRECT'
@@ -527,6 +542,108 @@ fig1.tight_layout() ; fig3.tight_layout()
 # plt.tight_layout()
 fig1.savefig('Controller_publication_plots/ContrLin_OtherTrajStatesDet.svg', format = "svg", bbox_inches='tight')
 fig3.savefig('Controller_publication_plots/ContrLin_OtherTrajControlsDet.svg', format = "svg", bbox_inches='tight')
+
+
+def plot_traj(pi, plot, bounds, c, ms, alpha, label, x0 =[15, 15], 
+                          xref = [10, 10], N=200, T=3):
+    
+    ax1, ax2, ax3, ax4 = plot
+    
+    _, sys_resp, control_resp = phi(pi, x0 = x0, xref = xref, N=N, T=T, return_sys_resp = True)
+    
+    x1 = np.array(sys_resp)[:,0] ; x2 = np.array(sys_resp)[:,1]
+    ax1.plot(np.arange(len(x1))/len(x1)*T, x1, markersize = ms, alpha = alpha, c = c, label = label)
+    ax1.plot([0, T], [xref[0], xref[0]], '--k')
+    ax2.plot([0, T], [xref[1], xref[1]], '--k')
+    ax2.plot(np.arange(len(x2))/len(x2)*T, x2, markersize = ms, alpha = alpha,c = c)
+
+    
+    u1 = np.array(control_resp)[:,0] ; u2 = np.array(control_resp)[:,1]
+    ax3.plot(np.arange(len(u1))/len(u1)*T, u1, markersize = ms, alpha = alpha, c = c, label = label)
+    ax4.plot(np.arange(len(u2))/len(u2)*T, u2, markersize = ms, alpha = alpha,  c = c)
+    # ax3.plot([0, T], [0, 0], '--k')
+    # ax4.plot([0, T], [0, 0], '--k')
+    return ax1, ax2, ax3, ax4
+
+
+fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
+ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
+ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
+plot = (ax1, ax2, ax4, ax5)
+
+pi_array = ContrLin_CUATRO_local_list[-1]['x_best_so_far']
+c = 'red'
+ms = 1
+alpha = 0.15
+label = '_no_Legend_'
+
+for i in range(len(pi_array)):
+    if i>= 15:
+        alpha = i/100
+    pi = pi_array[i]
+    plot = plot_traj(pi, plot, bounds, c, ms, alpha, label)
+
+
+ax1.set_xlabel('Time') ; ax1.set_ylabel('$x_1$')
+ax2.set_xlabel('Time') ; ax2.set_ylabel('$x_2$')
+ax4.set_xlabel('Time') ; ax4.set_ylabel('$u_1$')
+ax5.set_xlabel('Time') ; ax5.set_ylabel('$u_2$')
+
+# fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+# fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+# fig1.legend(bbox_to_anchor=(0,1.01,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+# fig3.legend(bbox_to_anchor=(0,1.01,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+
+# ax1.legend() ; ax2.legend() ; ax4.legend() ; ax5.legend()
+# ax1.tight_layout() ; ax2.tight_layout() ; ax4.tight_layout() ; ax5.tight_layout()
+fig1.tight_layout() ; fig3.tight_layout()
+# plt.tight_layout()
+fig1.savefig('Controller_publication_plots/ContrLin_ConvergenceStatesDet.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('Controller_publication_plots/ContrLin_ConvergenceControlsDet.svg', format = "svg", bbox_inches='tight')
+
+
+
+
+fig1, fig2, fig3 = plt.figure(), plt.figure(), plt.figure()
+ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
+ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
+plot = (ax1, ax2, ax4, ax5)
+
+pi_array = ContrLin_pybobyqa['x_best_so_far']
+
+c = 'red'
+ms = 1
+alpha = 0.15
+label = '_no_Legend_'
+
+for i in range(len(pi_array)):
+    if i>= 15:
+        alpha = i/100
+    pi = pi_array[i]
+    plot = plot_traj(pi, plot, bounds, c, ms, alpha, label, x0 = [20, 0])
+    # plot = plot_traj(pi, plot, bounds, c, ms, alpha, label)
+
+
+ax1.set_xlabel('Time') ; ax1.set_ylabel('$x_1$')
+ax2.set_xlabel('Time') ; ax2.set_ylabel('$x_2$')
+ax4.set_xlabel('Time') ; ax4.set_ylabel('$u_1$')
+ax5.set_xlabel('Time') ; ax5.set_ylabel('$u_2$')
+
+# fig1.legend(bbox_to_anchor=(1.01,0.5), loc="center left")
+# fig3.legend(bbox_to_anchor=(1.01,0.5), loc="center left") 
+# fig1.legend(bbox_to_anchor=(0,1.01,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+# fig3.legend(bbox_to_anchor=(0,1.01,1,0.2), loc="lower left",
+#                 mode="expand", borderaxespad=0, ncol=4)
+
+# ax1.legend() ; ax2.legend() ; ax4.legend() ; ax5.legend()
+# ax1.tight_layout() ; ax2.tight_layout() ; ax4.tight_layout() ; ax5.tight_layout()
+fig1.tight_layout() ; fig3.tight_layout()
+# plt.tight_layout()
+fig1.savefig('Controller_publication_plots/ContrLin_ConvergenceStatesDetpybbqa.svg', format = "svg", bbox_inches='tight')
+fig3.savefig('Controller_publication_plots/ContrLin_ConvergenceControlsDetpybbqa.svg', format = "svg", bbox_inches='tight')
 
 
 ## Plots_test

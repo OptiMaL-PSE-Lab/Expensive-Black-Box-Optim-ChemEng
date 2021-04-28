@@ -89,19 +89,34 @@ class RB:
             temporary = [g(x, y).astype(int) for g in self.ieq]
             return np.product(np.array(temporary), axis = 0)
 
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def Problem_rosenbrock(x):
@@ -205,7 +220,11 @@ with open('BayesRB_list.pickle', 'rb') as handle:
     RB_Bayes_list = pickle.load(handle)
 
 RB_Bayes_list = fix_starting_points(RB_Bayes_list, x0, initial_output)
-
+RB_DIRECT_list = fix_starting_points(RB_DIRECT_list, x0, initial_output)
+RB_simplex_list = fix_starting_points(RB_simplex_list, x0, initial_output)
+RB_pybobyqa['x_best_so_far'][0] = np.array(x0)
+RB_pybobyqa['f_best_so_far'][0] = initial_output[0]
+RB_pybobyqa['g_best_so_far'][0] = np.array(initial_output[1])
 
 x_best_pyBbyqa = np.array(RB_pybobyqa['x_best_so_far'])
 f_best_pyBbyqa = np.array(RB_pybobyqa['f_best_so_far'])
@@ -445,27 +464,28 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(len(f_best_pyBbyqa)), f_best_pyBbyqa, where = 'post', \
-          label = 'PyBobyqa', c = 'green')
+          label = 'Py-BOBYQA', c = 'green')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
-          label = 'BO', c = 'r')
+          label = 'Bayes. Opt.', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
 ax.set_xlim([1, 100])   
+ax.set_ylim([0.8, 200])   
 fig.savefig('Publication plots format/RB_Model.svg', format = "svg")
  
     
@@ -490,10 +510,11 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 # ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.')
 
 ax.legend()
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_yscale('log')
 ax.set_xlim([1, 100])
+ax.set_ylim([0.8, 200])   
 fig.savefig('Publication plots format/RB_Others.svg', format = "svg")
 
 
@@ -510,7 +531,7 @@ def method_convergence(ax, sol, label, col):
 
 
 ax, fig = trust_fig(oracle, bounds)
-ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt', 'purple')
+ax = method_convergence(ax, RB_Bayes_list[0], 'Bayes. Opt.', 'purple')
 ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
 ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
@@ -564,7 +585,7 @@ plt.show()
 plt.clf()
 
 ax, fig = trust_fig(oracle, bounds)
-ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'SQSnobfit', 'c')
+ax = method_convergence(ax, RB_SQSnobFit_list[-0], 'Snobfit', 'c')
 ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
 ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])
@@ -577,7 +598,7 @@ plt.show()
 plt.clf()
 
 ax, fig = trust_fig(oracle, bounds)
-ax = method_convergence(ax, RB_pybobyqa, 'PyBOBYQA', 'orange')
+ax = method_convergence(ax, RB_pybobyqa, 'Py-BOBYQA', 'orange')
 ax.scatter(x0[0], x0[1], color = 'black', label = 'Init. position')
 ax.set_xlim(bounds[0])
 ax.set_ylim(bounds[1])

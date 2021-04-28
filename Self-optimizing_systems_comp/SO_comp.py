@@ -62,19 +62,34 @@ def average_from_list(solutions_list):
     f_max = np.max(f_best_all, axis = 0)
     return f_best_all, f_median, f_min, f_max
 
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def medianx_from_list(solutions_list, x0):
@@ -289,7 +304,9 @@ with open('BayesSO_list.pickle', 'rb') as handle:
 
 SO_Bayes_list = fix_starting_points(SO_Bayes_list, x0, initial_output)
 SO_DIRECT_list = fix_starting_points(SO_DIRECT_list, x0, initial_output)
-
+SO_simplex_list = fix_starting_points(SO_simplex_list, x0, initial_output,
+                                      only_starting_point = True)
+SO_pybbqa_list = fix_starting_points(SO_pybbqa_list, x0, initial_output)
 
 plant = systems.Static_PDE_reaction_system()
 
@@ -552,10 +569,10 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5, step = 'post')
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
@@ -565,13 +582,13 @@ ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit', c = 
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5, step = 'post')
 ax.step(np.arange(1, 101), test_av_BO, where = 'post', \
-          label = 'BO', c = 'r')
+          label = 'Bayes. Opt.', c = 'r')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'r', alpha = .5, step = 'post')
 
 ax.legend()
 # ax.set_yscale('log')
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_xlim([1, 50])    
 ax.legend(loc = 'upper right')
@@ -602,7 +619,7 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 
 ax.legend()
 # ax.set_yscale('log')
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_xlim([1, 50])
 ax.legend(loc = 'upper right')
@@ -640,32 +657,40 @@ ax2.set_ylim(bounds[1])
 ax2.legend()
 fig2.savefig('Publication plots/SO_2D_convergence_best.svg', format = "svg")
 
+
 def count_feasible_sampling(inpt, list_input = True, threshold = 0):
     if list_input:
         count = 0 ; N_tot = 0
         N = len(inpt)
+        best = 0
         for i in range(N):
             arr = np.array(inpt[i]['g_store'])
             count += np.sum(np.product((arr <= threshold).astype(int), axis = 1))
             N_tot += len(arr)
-        return count/N_tot 
+            best += inpt[i]['f_best_so_far'][-1] / N
+        return count/N_tot, best
     else:
         arr = np.array(inpt['g_store'])
         N_tot = len(arr)
         count = np.sum(np.product((arr <= threshold).astype(int), axis = 1))
-        return count/N_tot
-       
+        best = inpt['f_best_so_far'][-1]
+        i = -1
+        while best == np.inf:
+            best = inpt['f_best_so_far'][i-1]
+            i -= 1
+        return count/N_tot, best
+    
 SO_constr_list = []
 # SO_constr_list.append(['Adam', count_feasible_sampling(SO_Adam, list_input = False)])
-SO_constr_list.append(['Bayes', count_feasible_sampling(SO_Bayes_list, threshold = 1e-3)])
-SO_constr_list.append(['CUATROg', count_feasible_sampling(SO_CUATRO_global_list)])
-SO_constr_list.append(['CUATROl', count_feasible_sampling(SO_CUATRO_local_list)])
+SO_constr_list.append(['Bayes. Opt', count_feasible_sampling(SO_Bayes_list, threshold = 1e-3)])
+SO_constr_list.append(['CUATRO_g', count_feasible_sampling(SO_CUATRO_global_list)])
+SO_constr_list.append(['CUATRO_l', count_feasible_sampling(SO_CUATRO_local_list)])
 SO_constr_list.append(['DIRECT', count_feasible_sampling(SO_DIRECT_list)])
 SO_constr_list.append(['Newton', count_feasible_sampling(SO_findiff_list)])
 # SO_constr_list.append(['Nesterov', count_feasible_sampling(SO_Nest_list)])
-SO_constr_list.append(['PyBOBYQA', count_feasible_sampling(SO_pybbqa_list)])
+SO_constr_list.append(['Py-BOBYQA', count_feasible_sampling(SO_pybbqa_list)])
 SO_constr_list.append(['Simplex', count_feasible_sampling(SO_simplex_list)])
-SO_constr_list.append(['SQSnobfit', count_feasible_sampling(SO_SQSnobFit_list)])
+SO_constr_list.append(['Snobfit', count_feasible_sampling(SO_SQSnobFit_list)])
 
 with open('SO_constraintSat_list.pickle', 'wb') as handle:
     pickle.dump(SO_constr_list, handle, protocol=pickle.HIGHEST_PROTOCOL)

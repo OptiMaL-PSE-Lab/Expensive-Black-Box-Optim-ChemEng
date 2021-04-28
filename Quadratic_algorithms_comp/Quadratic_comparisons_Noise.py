@@ -193,16 +193,34 @@ plt.show()
 # ax.set_yscale("log")
 plt.clf()
 
-ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+
+min_list = np.array([np.min([np.min(quadraticNoise_list_Bayes[i]), 
+                  np.min(quadraticNoise_list_CUATROl[i]),
+                  np.min(quadraticNoise_list_DIRECT[i]), 
+                  np.min(quadraticNoise_list_CUATROg[i])]) for i in range(n_noise)])
+
+convergence_test = list(itertools.chain(*np.array(quadraticNoise_list_Bayes) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticNoise_list_CUATROl) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticNoise_list_DIRECT) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticNoise_list_CUATROg) - min_list.reshape(6,1)))    
+    
+
+data_test = {'Best function evaluation': convergence_test, \
+             "Constraint violation": constraints, \
+             "Noise standard deviation": noise, \
+             'Method': method}
+
+df_test = pd.DataFrame(data_test)
+    
+ax = sns.boxplot(x = "Noise standard deviation", y = 'Best function evaluation', hue = "Method", data = df_test, palette = "muted")
 # plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 # plt.legend([])
 plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                 mode="expand", borderaxespad=0, ncol=4)
 plt.tight_layout()
+plt.ylabel(r'$f_{best, sample}$ - $f_{opt, noise}$')
 plt.savefig('Quadratic_publication_plots/Quadratic_feval50ConvergenceLabel.svg', format = "svg")
 plt.show()
-# ax.set_ylim([0.1, 10])
-# ax.set_yscale("log")
 plt.clf()
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
@@ -338,16 +356,33 @@ plt.show()
 plt.clf()
 
 
-ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+min_list = np.array([np.min([np.min(quadraticSAANoise_list_Bayes[i]), 
+                  np.min(quadraticSAANoise_list_CUATROl[i]),
+                  np.min(quadraticSAANoise_list_DIRECT[i]), 
+                  np.min(quadraticSAANoise_list_CUATROg[i])]) for i in range(n_noise)])
+
+convergence_test = list(itertools.chain(*np.array(quadraticSAANoise_list_Bayes) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticSAANoise_list_CUATROl) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticSAANoise_list_DIRECT) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(quadraticSAANoise_list_CUATROg) - min_list.reshape(6,1)))    
+    
+
+data_test = {'Best function evaluation': convergence_test, \
+             "Constraint violation": constraints, \
+             "Noise standard deviation": noise, \
+             'Method': method}
+
+df_test = pd.DataFrame(data_test)
+    
+ax = sns.boxplot(x = "Noise standard deviation", y = 'Best function evaluation', hue = "Method", data = df_test, palette = "muted")
 # plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 # plt.legend([])
 plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                 mode="expand", borderaxespad=0, ncol=4)
 plt.tight_layout()
+plt.ylabel(r'$f_{best, sample}$ - $f_{opt, noise}$')
 plt.savefig('Quadratic_publication_plots/Quadratic_SAA2feval25ConvergenceLabel.svg', format = "svg")
 plt.show()
-# ax.set_ylim([0.1, 10])
-# ax.set_yscale("log")
 plt.clf()
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \

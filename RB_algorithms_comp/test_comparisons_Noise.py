@@ -243,9 +243,9 @@ constraints = list(itertools.chain(*RBconstraint_list_pybbqa)) + \
               list(itertools.chain(*RBconstraint_list_Bayes))   
               
 noise = list(itertools.chain(*noise_labels))*5
-method = ['Py-BOBYQA']*int(len(noise)/5) + ['SQSnobfit']*int(len(noise)/5) + \
+method = ['Py-BOBYQA']*int(len(noise)/5) + ['Snobfit']*int(len(noise)/5) + \
           ['DIRECT']*int(len(noise)/5) + ['CUATRO_g']*int(len(noise)/5) + \
-           ['Bayes. opt']*int(len(noise)/5)   
+           ['Bayes. Opt.']*int(len(noise)/5)   
 
 data = {'Best function evaluation': convergence, \
         "Constraint violation": constraints, \
@@ -274,16 +274,35 @@ plt.show()
 plt.clf()
 
 
-ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+min_list = np.array([np.min([np.min(RBnoise_list_pybbqa[i]), 
+                  np.min(RBnoise_list_SQSF[i]),
+                  np.min(RBnoise_list_DIRECT[i]), 
+                  np.min(RBnoise_list_CUATROg[i]), 
+                  np.min(RBnoise_list_Bayes[i])]) for i in range(n_noise)])
+
+convergence_test = list(itertools.chain(*np.array(RBnoise_list_pybbqa) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoise_list_SQSF) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoise_list_DIRECT) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoise_list_CUATROg) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoise_list_Bayes) - min_list.reshape(6,1)))
+    
+
+data_test = {'Best function evaluation': convergence_test, \
+             "Constraint violation": constraints, \
+             "Noise standard deviation": noise, \
+             'Method': method}
+
+df_test = pd.DataFrame(data_test)
+    
+ax = sns.boxplot(x = "Noise standard deviation", y = 'Best function evaluation', hue = "Method", data = df_test, palette = "muted")
 # plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 # plt.legend([])
 plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                 mode="expand", borderaxespad=0, ncol=3)
 plt.tight_layout()
-plt.savefig('Publication plots format/RB_feval100ConvergenceWithLabel.svg', format = "svg")
+plt.ylabel(r'$f_{best, sample}$ - $f_{opt, noise}$')
+plt.savefig('Publication plots format/RB_feval100ConvergenceLabel.svg', format = "svg")
 plt.show()
-# ax.set_ylim([0.1, 10])
-# ax.set_yscale("log")
 plt.clf()
 
 ax = sns.boxplot(x = "Noise standard deviation", y = "Constraint violation", \
@@ -405,9 +424,9 @@ constraints = list(itertools.chain(*RBconstraintSAA_list_pybbqa)) + \
               list(itertools.chain(*RBconstraintSAA_list_Bayes))   
               
 noise = list(itertools.chain(*noise_labels))*5
-method = ['Py-BOBYQA']*int(len(noise)/5) + ['SQSnobfit']*int(len(noise)/5) + \
+method = ['Py-BOBYQA']*int(len(noise)/5) + ['Snobfit']*int(len(noise)/5) + \
           ['DIRECT']*int(len(noise)/5) + ['CUATRO_g']*int(len(noise)/5) + \
-           ['Bayes. opt']*int(len(noise)/5)   
+           ['Bayes. Opt.']*int(len(noise)/5)   
 
 data = {'Best function evaluation': convergence, \
         "Constraint violation": constraints, \
@@ -436,16 +455,38 @@ plt.show()
 # ax.set_yscale("log")
 plt.clf()
 
-ax = sns.boxplot(x = "Noise standard deviation", y = "Best function evaluation", hue = "Method", data = df, palette = "muted")
+min_list = np.array([np.min([np.min(RBnoiseSAA_list_pybbqa[i]), 
+                  np.min(RBnoiseSAA_list_SQSF[i]),
+                  np.min(RBnoiseSAA_list_DIRECT[i]), 
+                  np.min(RBnoiseSAA_list_CUATROg[i]), 
+                  np.min(RBnoiseSAA_list_Bayes[i])]) for i in range(n_noise)])
+
+convergence_test = list(itertools.chain(*np.array(RBnoiseSAA_list_pybbqa) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoiseSAA_list_SQSF) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoiseSAA_list_DIRECT) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoiseSAA_list_CUATROg) - min_list.reshape(6,1))) + \
+              list(itertools.chain(*np.array(RBnoiseSAA_list_Bayes) - min_list.reshape(6,1)))
+    
+
+data_test = {'Best function evaluation': convergence_test, \
+             "Constraint violation": constraints, \
+             "Noise standard deviation": noise, \
+             'Method': method}
+
+df_test = pd.DataFrame(data_test)
+    
+ax = sns.boxplot(x = "Noise standard deviation", y = 'Best function evaluation', hue = "Method", data = df_test, palette = "muted")
 # plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+# plt.legend([])
 plt.legend(bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                 mode="expand", borderaxespad=0, ncol=3)
 plt.tight_layout()
+plt.ylabel(r'$f_{best, sample}$ - $f_{opt, noise}$')
 plt.savefig('Publication plots format/RB_SAA2feval50ConvergenceLabel.svg', format = "svg")
 plt.show()
-# ax.set_ylim([0.1, 10])
-# ax.set_yscale("log")
 plt.clf()
+
+
 
 
 

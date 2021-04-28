@@ -77,19 +77,34 @@ def plot_reactor_respRand(pi, plot, method, bounds, noise, c, x0 = [.6, 310],
     ax4.plot(np.arange(len(u2))/len(u2)*T, u2, c=c)
     return ax1, ax2, ax3, ax4
 
-def fix_starting_points(complete_list, x0, init_out):
-    for i in range(len(complete_list)):
-        dict_out = complete_list[i]
-        f_arr = dict_out['f_best_so_far']
-        N_eval = len(f_arr)
-        g_arr = dict_out['g_best_so_far']
+def fix_starting_points(complete_list, x0, init_out, only_starting_point = False):
+    if only_starting_point:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
+            complete_list[i] = dict_out        
+    else:
+        for i in range(len(complete_list)):
+            dict_out = complete_list[i]
+            f_arr = dict_out['f_best_so_far']
+            N_eval = len(f_arr)
+            g_arr = dict_out['g_best_so_far']
+            dict_out['x_best_so_far'][0] = np.array(x0)
+            dict_out['f_best_so_far'][0] = init_out[0]
+            dict_out['g_best_so_far'][0] = np.array(init_out[1])
         
-        for j in range(N_eval):
-            if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
-               dict_out['x_best_so_far'][j] = np.array(x0)
-               dict_out['f_best_so_far'][j] = init_out[0]
-               dict_out['g_best_so_far'][j] = np.array(init_out[1])
-        complete_list[i] = dict_out
+            for j in range(1, N_eval):
+                if (g_arr[j] > 1e-3).any() or (init_out[0] < f_arr[j]):
+                    dict_out['x_best_so_far'][j] = np.array(x0)
+                    dict_out['f_best_so_far'][j] = init_out[0]
+                    dict_out['g_best_so_far'][j] = np.array(init_out[1])
+            complete_list[i] = dict_out
+            
     return complete_list
 
 def cost_control_noise(x, bounds_abs, noise, N_SAA, x0 = [.116, 368.489], \
@@ -249,6 +264,8 @@ with open('BayesContrSynRand_list.pickle', 'rb') as handle:
 
 ContrSynRand_Bayes_list = fix_starting_points(ContrSynRand_Bayes_list, x0, initial_outputRand)
 ContrSynRand_DIRECT_list = fix_starting_points(ContrSynRand_DIRECT_list, x0, initial_outputRand)
+ContrSynRand_simplex_list = fix_starting_points(ContrSynRand_simplex_list, x0, initial_outputRand)
+ContrSynRand_pybobyqa_list = fix_starting_points(ContrSynRand_pybobyqa_list, x0, initial_outputRand)
 
 
 plt.rcParams["font.family"] = "Times New Roman"
@@ -442,10 +459,10 @@ test_BO, test_av_BO, test_min_BO, test_max_BO = sol_BO
 
 fig = plt.figure()
 ax = fig.add_subplot()
-ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_global', c = 'b')
+ax.step(np.arange(1, 101), test_av_CUATROg, where = 'post', label = 'CUATRO_g', c = 'b')
 ax.fill_between(np.arange(1, 101), test_min_CUATROg, \
                 test_max_CUATROg, color = 'b', alpha = .5)
-ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_local', c = 'c')
+ax.step(np.arange(1, 101), test_av_CUATROl, where = 'post', label = 'CUATRO_l', c = 'c')
 ax.fill_between(np.arange(1, 101), test_min_CUATROl, \
                 test_max_CUATROl, color = 'c', alpha = .5)
 ax.step(np.arange(1, 101), test_av_pybbqa, where = 'post', label = 'Py-BOBYQA ', c = 'green')
@@ -454,15 +471,16 @@ ax.fill_between(np.arange(1, 101), test_min_pybbqa, \
 ax.step(np.arange(1, 101), test_av_SQSF, where = 'post', label = 'Snobfit*', c = 'orange')
 ax.fill_between(np.arange(1, 101), test_min_SQSF, \
                 test_max_SQSF, color = 'orange', alpha = .5)
-ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt', c = 'red')
+ax.step(np.arange(1, 101), test_av_BO, where = 'post', label = 'Bayes. Opt.', c = 'red')
 ax.fill_between(np.arange(1, 101), test_min_BO, \
                 test_max_BO, color = 'red', alpha = .5)
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
-ax.set_xlim([1, 100])    
+ax.set_xlim([1, 100]) 
+ax.set_ylim([1, 150])   
 ax.legend(loc = 'upper right')
 fig.savefig('ContrSyn_publication_plots/ContrSyn_Model.svg', format = "svg")
 
@@ -490,9 +508,10 @@ ax.fill_between(np.arange(1, 101), test_min_DIR, \
 
 ax.legend()
 ax.set_yscale('log')
-ax.set_xlabel('Nbr. of function evaluations')
+ax.set_xlabel('Number of function evaluations')
 ax.set_ylabel('Best function evaluation')
 ax.set_xlim([1, 100])
+ax.set_ylim([1, 150])
 ax.legend(loc = 'upper right')
 fig.savefig('ContrSyn_publication_plots/ContrSyn_Others.svg', format = "svg")
 
@@ -534,7 +553,7 @@ ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
 # noise_red = np.array(noise)/3
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_reactor_respRand(x0, plot, method, bounds_abs, noise, 'red', x0 = [.116, 368.489], 
                               N = 200*5, T = 20)
@@ -574,7 +593,7 @@ fig1, fig3 = plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_reactor_respRand(x0, plot, method, bounds_abs, [0, 0], 'red', x0 = [.116, 368.489], 
                               N = 200*5, T = 20)
@@ -618,7 +637,7 @@ ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
 noise_red = np.array(noise)/5
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_reactor_respRand(x0, plot, method, bounds_abs, noise_red, 'red', x0 = [.8, 300], 
                               N = 200*5, T = 20)
@@ -658,7 +677,7 @@ fig1, fig3 = plt.figure(), plt.figure()
 ax1, ax2 = fig1.add_subplot(211), fig1.add_subplot(212)
 ax4, ax5 = fig3.add_subplot(211), fig3.add_subplot(212)
 
-method = 'Init'
+method = 'Initial'
 plot = (ax1, ax2, ax4, ax5)
 plot = plot_reactor_respRand(x0, plot, method, bounds_abs, [0, 0], 'red', x0 = [.8, 300], 
                               N = 200*5, T = 20)
