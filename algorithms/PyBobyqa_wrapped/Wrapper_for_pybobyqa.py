@@ -39,7 +39,8 @@ class PyBobyqaWrapper:
         else:
             #self.constraints = constraints
             self.card_of_funcs = 1 +constraints
-            self.Penaly_fun = PenaltyFunctions(objfun, type_penalty=penalty_con, mu=1e3)
+            self.Penaly_fun = PenaltyFunctions(objfun, type_penalty=penalty_con, \
+                                               mu = mu_con)
             f_pen = self.Penaly_fun.aug_obj  # functools.partial(penalized_objective,f1,[g1,g2], 100)
 
             # self.set_functions = [self.objective]
@@ -58,16 +59,23 @@ class PyBobyqaWrapper:
     def create_dictionary_for_solution(self, sol):
         # CHANGE FOR THE SO FAR GOOD
 
+
         f_so_far, g_so_far = self.find_min_so_far()
         output_dict = {}
         output_dict['g_store']       = self.Penaly_fun.g_his
+        # print(sol)
+        # print(sol.diagnostic_info['xk'])
+        # print(np.array([sol.diagnostic_info['xk'].tolist()]))
+        # print(np.array([sol.diagnostic_info['xk']])[0])
+        # print(np.array([sol.diagnostic_info['xk']])[0].astype('d'))
         output_dict['x_store']       = np.array([sol.diagnostic_info['xk'].tolist()])[0].astype('d')
         output_dict['f_store']       = self.Penaly_fun.f_his
         output_dict['N_evals']       = self.maxfun
         output_dict['g_best_so_far'] = g_so_far
         output_dict['f_best_so_far'] = f_so_far
-        output_dict['x_best_so_far'] = np.array([sol.diagnostic_info['xk']])[0].astype('d')
-        output_dict['TR']            = np.array([sol.diagnostic_info['delta']])[0].astype('d')
+        output_dict['x_best_so_far'] = np.array([sol.diagnostic_info['xk'].tolist()])[0].astype('d')
+        output_dict['TR']            = np.array([sol.diagnostic_info['delta'].tolist()])[0].astype('d')
+        output_dict['samples_at_iteration']            = np.arange(1, 1+len(f_so_far))
         return output_dict
 
 

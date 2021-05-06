@@ -1,0 +1,134 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr 14 22:33:03 2021
+
+@author: dv516
+"""
+
+
+import numpy as np
+import pickle
+
+import pyro
+pyro.enable_validation(True)  # can help with debugging
+pyro.set_rng_seed(1)
+
+from algorithms.PyBobyqa_wrapped.Wrapper_for_pybobyqa import PyBobyqaWrapper
+from algorithms.Bayesian_opt_Pyro.utilities_full import BayesOpt
+from algorithms.nesterov_random.nesterov_random import nesterov_random
+from algorithms.simplex.simplex_method import simplex_method
+from algorithms.CUATRO.CUATRO import CUATRO
+from algorithms.Finite_differences.Finite_differences import finite_Diff_Newton
+from algorithms.Finite_differences.Finite_differences import Adam_optimizer
+from algorithms.Finite_differences.Finite_differences import BFGS_optimizer
+from algorithms.SQSnobfit_wrapped.Wrapper_for_SQSnobfit import SQSnobFitWrapper
+from algorithms.DIRECT_wrapped.Wrapper_for_Direct import DIRECTWrapper
+
+from case_studies.self_optimization import systems
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import itertools
+import pandas as pd
+import pickle
+
+def trust_fig(X, Y, Z, g1):   
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.contour(X, Y, Z, 50)
+    ax.contour(X, Y, g1, levels = [0], colors = 'black')
+    # ax.contour(X, Y, g2, levels = [0], colors = 'black')
+    
+    return ax, fig
+
+
+def average_from_list(solutions_list):
+    N = len(solutions_list)
+    f_best_all = np.zeros((N, 100))
+    for i in range(N):
+        f_best = np.array(solutions_list[i]['f_best_so_far'])
+        x_ind = np.array(solutions_list[i]['samples_at_iteration'])
+        for j in range(100):
+            ind = np.where(x_ind <= j+1)
+            if len(ind[0]) == 0:
+                f_best_all[i, j] = f_best[0]
+            else:
+                f_best_all[i, j] = f_best[ind][-1]
+    f_median = np.median(f_best_all, axis = 0)
+    # f_av = np.average(f_best_all, axis = 0)
+    # f_std = np.std(f_best_all, axis = 0)
+    f_min = np.min(f_best_all, axis = 0)
+    f_max = np.max(f_best_all, axis = 0)
+    return f_best_all, f_median, f_min, f_max
+
+def self_opt_react(x, noise_level, N_SAA):
+    plant = systems.Static_PDE_reaction_system()
+    f = lambda x: plant.objective(x, noise_level[0])
+    g = lambda x: plant.constraint_agg_1(x, noise_level[1])
+    f_SAA = 0 ; g_SAA = -np.inf
+    for i in range(N_SAA):
+        f_SAA += f(x)/N_SAA
+        g_SAA = np.maximum(g_SAA, g(x))
+    
+    return f_SAA, [g_SAA]
+
+x0 = np.array([0.0,0.85])
+bounds = np.array([[0., 1.], [0., 1.]])
+
+noise_init = [0, 0] ; N_SAA  = 1
+max_f_eval = 50
+
+f = lambda x: self_opt_react(x, noise_init, N_SAA)
+DIRECT_f = lambda x, grad: self_opt_react(x, noise_init, N_SAA)
+
+
+N = 10
+SO_DIRECT_list = []
+for i in range(1):
+    SO_DIRECT =  DIRECTWrapper().solve(DIRECT_f, x0, bounds, mu_con = 1e3, \
+                                    maxfun = max_f_eval, constraints=1)
+    SO_DIRECT_list.append(SO_DIRECT)
+print('10 DIRECT iterations completed')    
+
+plant = systems.Static_PDE_reaction_system()
+
+N_draw = 20
+x = np.linspace(0, 1, N_draw)
+y = np.linspace(0, 1, N_draw)
+X, Y = np.meshgrid(x, y)
+Z_SO = np.zeros((N_draw, N_draw))
+g1_SO = np.zeros((N_draw, N_draw))
+for i in range(len(x)):
+    print(i+1, ' out of ', N_draw)
+    for j in range(len(y)):
+    
+        temp = f(np.array([x[i], y[j]]))
+        Z_SO[j][i] = temp[0]
+        g1_SO[j][i] = temp[1][0]
+
+with open('Z_SO.pickle', 'wb') as handle:
+    pickle.dump(Z_SO, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('g1_SO.pickle', 'wb') as handle:
+    pickle.dump(g1_SO, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
+x_best = np.array(SO_DIRECT_list[0]['x_best_so_far'])
+f_best = np.array(SO_DIRECT_list[0]['f_best_so_far'])
+x_ind = np.array(SO_DIRECT_list[0]['samples_at_iteration'])
+
+ax2, fig2 = trust_fig(X, Y, Z_SO, g1_SO)
+ax2.plot(x_best[:,0], x_best[:,1], '--x', \
+         label = 'DIRECT')
+
+
+

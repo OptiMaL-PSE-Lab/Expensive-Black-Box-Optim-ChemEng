@@ -32,8 +32,10 @@ class PenaltyFunctions:
         funcs = self.f(x)
         obj   = funcs[0]
         card_of_funcs = len(funcs[1])+1
-
-        self.f_his += [obj.copy()]
+        if type(obj) == float:
+            self.f_his += [obj]
+        else:
+            self.f_his += [obj.copy()]
         n_con = card_of_funcs-1
         g_tot = np.zeros(n_con)
         for i in range(n_con):
