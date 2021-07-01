@@ -63,12 +63,13 @@ where the first output denotes the objective function, and where the second outp
 
 The solver (wrappers) require only three essential inputs, the problem function, the initial guess, and the input bounds. Methods that rely on penalty functions to map the constraints also require the number of constraints. The function evaluation budget has a default value of 100.
 
-```x0 = np.array([0.1, 0.2, 0.3]) # for 3-d problems
- bounds = np.array([[0,1], [0,1], [0,1]])
- max_f_eval = 100
+```
+x0 = np.array([0.1, 0.2, 0.3]) # for 3-d problems
+bounds = np.array([[0,1], [0,1], [0,1]])
+max_f_eval = 100
 
 # Example of solver call
- dictionary = SQSnobFitWrapper().solve(problem, x0, bounds, \
+dictionary = SQSnobFitWrapper().solve(problem, x0, bounds, \
                                     maxfun = max_f_eval, constraints=2)
 ```
 
