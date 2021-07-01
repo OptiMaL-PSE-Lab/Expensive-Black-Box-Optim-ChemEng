@@ -50,7 +50,8 @@ The subsequent comparison is based on the assumption that the black boxes that a
 
 The functions that are used are defined as follows:
 
-```def problem(x):
+```
+def problem(x):
     f = @(x) ..
     g1 = @(x) ..
     g2 = @(x) ..
